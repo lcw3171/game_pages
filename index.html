@@ -1,581 +1,759 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-HK">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape" />
-  <title>天秤 | KING OF DIAMONDS (多人房間版)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#09090b" />
+  <title>♦ 天秤審判 — 心理博弈對戰系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg-dark: #07090c;
-      --grid-line: rgba(255, 255, 255, 0.045);
-    }
-
-    * {
-      box-sizing: border-box;
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #09090b;
+      color: #f4f4f5;
+      overflow-x: hidden;
       -webkit-tap-highlight-color: transparent;
     }
+    .font-title { font-family: 'Cinzel', 'Noto Sans TC', serif; }
+    .font-number { font-family: 'JetBrains Mono', monospace; }
 
-    body {
-      background-color: var(--bg-dark);
-      color: #f3f4f6;
-      font-family: 'Noto Sans TC', sans-serif;
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden;
+    .diamond-bg {
+      background-image:
+        radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.16), transparent 60%),
+        radial-gradient(circle at 15% 85%, rgba(245, 158, 11, 0.08), transparent 50%),
+        linear-gradient(to bottom, #09090b, #050507);
+    }
+
+    .glass-panel {
+      background: rgba(24, 24, 27, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(63, 63, 70, 0.6);
+    }
+
+    .num-btn {
+      transition: all 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
       user-select: none;
     }
-
-    .cyber-grid {
-      background-color: #06080a;
-      background-image:
-        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-      background-size: 24px 24px;
-      background-position: center center;
+    .num-btn:active:not(:disabled) {
+      transform: scale(0.92);
+    }
+    .num-btn.selected {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      font-weight: 900;
+      border-color: #fbbf24;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+    }
+    .num-btn.locked-choice {
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      color: #fff;
+      font-weight: 900;
+      border-color: #f87171;
+      box-shadow: 0 0 18px rgba(220, 38, 38, 0.65);
     }
 
-    .font-number {
-      font-family: 'Oswald', 'Noto Sans TC', sans-serif;
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.25); }
+      50% { box-shadow: 0 0 28px rgba(245, 158, 11, 0.6); }
+    }
+    .winner-glow {
+      animation: pulseGlow 2s infinite;
     }
 
-    .corner-triangle {
-      width: 0;
-      height: 0;
-      border-style: solid;
-      border-width: 8px 0 0 8px;
-      border-color: transparent transparent transparent #ffffff;
-    }
-    .corner-triangle.locked {
-      border-color: transparent transparent transparent #4ade80;
-      filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.8));
-    }
-    .corner-triangle.eliminated {
-      border-color: transparent transparent transparent #52525b;
-    }
-
-    .winner-frame {
-      position: relative;
-    }
-    .winner-frame::after {
-      content: '';
-      position: absolute;
-      inset: -6px;
-      border: 2px solid #d62828;
-      box-shadow: 0 0 16px rgba(214, 40, 40, 0.5), inset 0 0 8px rgba(214, 40, 40, 0.3);
-      pointer-events: none;
-      z-index: 20;
-      animation: pulseRed 2s infinite ease-in-out;
-    }
-
-    @keyframes pulseRed {
-      0%, 100% { border-color: #d62828; box-shadow: 0 0 14px rgba(214, 40, 40, 0.4); }
-      50% { border-color: #ff4d4d; box-shadow: 0 0 24px rgba(255, 77, 77, 0.8); }
-    }
-
-    .eliminated-card {
-      filter: grayscale(100%) brightness(0.32) contrast(1.1);
-      opacity: 0.72;
-    }
-
-    .num-grid-scroll::-webkit-scrollbar {
-      width: 4px;
-    }
-    .num-grid-scroll::-webkit-scrollbar-track {
-      background: #0d1117;
-    }
-    .num-grid-scroll::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
-    }
-
-    .ivory-box {
-      background-color: #e4e4e2;
-      color: #111317;
-      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.6);
-    }
-
-    .rule-unlocked {
-      border-color: #ef4444;
-      background: linear-gradient(90deg, rgba(127, 29, 29, 0.35) 0%, rgba(15, 23, 42, 0.85) 100%);
-      box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
-    }
+    /* Custom thin scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #09090b; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
   </style>
 </head>
-<body class="cyber-grid min-h-screen flex flex-col">
+<body class="diamond-bg min-h-screen flex flex-col">
 
-  <!-- Toast Container -->
-  <div id="toast-container" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] max-w-md"></div>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
-  <!-- Disconnect Pause Overlay (斷線暫停與 10 分鐘倒數返回大廳) -->
-  <div id="disconnect-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/92 backdrop-blur-md hidden">
-    <div class="bg-zinc-900 border-2 border-amber-500 rounded-3xl p-6 sm:p-8 w-[92%] max-w-md shadow-2xl text-center space-y-5">
-      <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-950/80 border border-amber-500 text-3xl animate-pulse">
-        📡
+  <!-- Disconnect / Pause Overlay -->
+  <div id="disconnect-overlay" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-20 h-20 rounded-full bg-red-950/80 border-2 border-red-500 flex items-center justify-center mb-5 animate-pulse">
+      <span class="text-4xl">📡</span>
+    </div>
+    <h2 class="text-2xl sm:text-3xl font-black text-red-400 tracking-wider mb-2">連線中斷 · 本回合已暫停</h2>
+    <p class="text-zinc-300 text-sm sm:text-base max-w-md mb-6">
+      系統偵測到網路連線中斷，已自動凍結當前選號與倒數狀態。請檢查網路並等待重新連線。
+    </p>
+    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl px-8 py-4 mb-6">
+      <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">全員自動返回大廳倒數</div>
+      <div id="disconnect-countdown" class="font-number text-4xl font-black text-amber-400">10:00</div>
+    </div>
+    <div class="flex flex-wrap gap-3 justify-center">
+      <button onclick="manualReconnect()" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg transition">
+        🔄 立即重新連線 (Reconnect)
+      </button>
+      <button onclick="forceTimeoutToLobby()" class="px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold border border-zinc-700 transition">
+        🏠 立即返回大廳
+      </button>
+    </div>
+  </div>
+
+  <!-- Host Passcode Modal (Fallback if needed) -->
+  <div id="password-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl p-6 max-w-sm w-full border border-zinc-700 shadow-2xl">
+      <h3 class="text-lg font-bold text-white mb-2">🔒 驗證主持權限</h3>
+      <p class="text-xs text-zinc-400 mb-4">請輸入主持管理密碼（預設：<span class="font-number text-amber-400">1234</span>）</p>
+      <input id="host-password-input" type="password" inputmode="numeric" placeholder="輸入密碼..."
+        class="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-700 text-white font-number text-center text-lg tracking-widest mb-4 focus:outline-none focus:border-amber-500" />
+      <div class="flex gap-2">
+        <button onclick="closePasswordModal()" class="flex-1 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 font-semibold hover:bg-zinc-700">取消</button>
+        <button onclick="verifyPassword()" class="flex-1 py-2.5 rounded-xl bg-amber-500 text-black font-bold hover:bg-amber-400">確認</button>
       </div>
-      <div class="space-y-1.5">
-        <div class="text-xs font-black tracking-[0.25em] text-amber-400">CONNECTION LOST — ROUND PAUSED</div>
-        <h3 class="text-xl sm:text-2xl font-black text-white">偵測到連線中斷，本回合已暫停</h3>
-        <p class="text-xs text-zinc-300 leading-relaxed">
-          所有選號與結算操作已暫時凍結，系統正在等待重新連線（Reconnect）。
+    </div>
+  </div>
+
+  <!-- ================= VIEW 0: GAME LOBBY ================= -->
+  <div id="view-lobby" class="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
+    <div class="max-w-xl w-full">
+      <!-- Header Brand -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-950/60 border border-red-800/60 text-red-400 text-xs font-bold tracking-widest mb-3">
+          <span>♦ KING OF DIAMONDS</span>
+          <span>·</span>
+          <span>心理博弈審判</span>
+        </div>
+        <h1 class="font-title text-4xl sm:text-5xl font-black text-white tracking-wider drop-shadow-[0_0_20px_rgba(220,38,38,0.45)]">
+          天 秤 審 判
+        </h1>
+        <p class="text-zinc-400 text-xs sm:text-sm mt-2">
+          起始 <span class="text-amber-400 font-bold">10 分</span> · 選取 <span class="text-white font-bold">1–100</span> · 貼近全場平均數 <span class="text-red-400 font-bold">× 0.8</span> 者勝出
         </p>
       </div>
 
-      <div class="bg-black/80 border border-zinc-800 rounded-2xl p-4 space-y-1">
-        <div class="text-[11px] text-zinc-400">若持續斷線超過 10 分鐘，全員將自動返回大廳</div>
-        <div id="disconnect-countdown-display" class="font-number text-4xl font-black tracking-widest text-red-400">10:00</div>
-      </div>
-
-      <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
-        <button onclick="manualReconnect()" class="flex-1 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs tracking-wider shadow-lg transition-all">
-          🔄 立即重新連線 (Reconnect)
-        </button>
-        <button onclick="forceTimeoutToLobby()" class="py-3 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs border border-zinc-700 transition-all">
-          🏠 直接返回大廳
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Password Modal -->
-  <div id="password-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm hidden">
-    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-[90%] max-w-sm shadow-2xl space-y-4">
-      <div class="text-center space-y-1">
-        <div class="text-[10px] tracking-[0.25em] text-red-500 font-black">SECURITY RESTRICTED</div>
-        <h3 class="text-base font-black text-white">請輸入安全密碼</h3>
-      </div>
-      <div>
-        <input type="password" id="modal-password-input" placeholder="••••" maxlength="4"
-          onkeydown="if(event.key === 'Enter') verifyPassword()"
-          class="w-full bg-black border border-zinc-700 text-center font-number text-2xl tracking-[0.5em] text-white py-3 rounded-xl focus:outline-none focus:border-red-500" />
-      </div>
-      <div class="flex gap-2 pt-1">
-        <button onclick="closePasswordModal()" class="flex-1 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-zinc-300 transition-all">取消</button>
-        <button onclick="verifyPassword()" class="flex-1 py-2.5 rounded-xl bg-red-700 hover:bg-red-600 text-xs font-bold text-white shadow-lg transition-all">確認</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= View 0: Pre-Game Lobby (加入房間 / 創建房間 / 等待室) ================= -->
-  <div id="view-lobby" class="flex-1 flex flex-col items-center justify-center p-4 min-h-screen">
-    <div class="w-full max-w-lg bg-zinc-900/95 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-      <!-- Title Banner -->
-      <div class="text-center space-y-2 border-b border-zinc-800 pb-5">
-        <div class="inline-flex items-center justify-center w-12 h-12 border-2 border-red-600 rotate-45 mb-2 bg-red-950/40">
-          <span class="-rotate-45 font-black text-lg text-red-500">♦K</span>
-        </div>
-        <h1 class="text-2xl sm:text-3xl font-black tracking-[0.25em] text-white">天秤審判</h1>
-        <p class="text-xs tracking-[0.2em] text-zinc-400">KING OF DIAMONDS — 多人對戰大廳</p>
-      </div>
-
-      <!-- Step 1: Mode Selection (Join vs Create) -->
-      <div id="lobby-step-select" class="space-y-4">
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-zinc-400">你的玩家名稱</label>
-          <input type="text" id="lobby-player-name" value="參賽者 1" placeholder="請輸入你的名字"
-            class="w-full bg-black border border-zinc-700 text-white font-bold text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-red-500" />
+      <!-- Step 1: Select Role (Join or Create) -->
+      <div id="lobby-step-select" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div class="mb-6">
+          <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">你的顯示名稱</label>
+          <input id="lobby-player-name" type="text" maxlength="12" placeholder="輸入你的名字或代號..."
+            class="w-full px-4 py-3.5 rounded-xl bg-zinc-950 border border-zinc-700 text-white font-bold text-base focus:outline-none focus:border-amber-500 transition" />
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button onclick="showJoinRoomForm()"
-            class="p-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 flex flex-col items-center justify-center gap-2 transition-all group">
-            <span class="text-2xl">🚪</span>
-            <span class="font-black text-base text-white">加入房間</span>
-            <span class="text-[11px] text-zinc-400">輸入主持提供的房間代碼</span>
+            class="group p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-emerald-500 text-left transition flex flex-col justify-between">
+            <div class="w-12 h-12 rounded-xl bg-emerald-950/80 border border-emerald-700/60 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+              🚪
+            </div>
+            <div>
+              <div class="text-lg font-black text-white group-hover:text-emerald-400 transition">加入房間</div>
+              <div class="text-xs text-zinc-400 mt-1">輸入主持人提供的 4 位數房間代碼加入對戰</div>
+            </div>
           </button>
 
           <button onclick="showCreateRoomForm()"
-            class="p-4 rounded-2xl bg-red-950/80 hover:bg-red-900/80 border border-red-700 flex flex-col items-center justify-center gap-2 transition-all group">
-            <span class="text-2xl">👑</span>
-            <span class="font-black text-base text-red-200">創建房間 (主持)</span>
-            <span class="text-[11px] text-red-300/80">設定人數模式並生成代碼</span>
+            class="group p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-amber-500 text-left transition flex flex-col justify-between">
+            <div class="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-700/60 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+              👑
+            </div>
+            <div>
+              <div class="text-lg font-black text-white group-hover:text-amber-400 transition">創建房間 (主持)</div>
+              <div class="text-xs text-zinc-400 mt-1">設定 5–10 人模式、開啟投影大螢幕與後台控場</div>
+            </div>
           </button>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-500">
+          <span id="cloud-status-badge" class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            連線狀態檢測中...
+          </span>
+          <span>支援跨手機瀏覽器即時同步</span>
         </div>
       </div>
 
       <!-- Step 2A: Join Room Form -->
-      <div id="lobby-step-join" class="hidden space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-black text-white">🚪 加入現有房間</h3>
-          <button onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white underline">返回</button>
+      <div id="lobby-step-join" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-black text-white">🚪 加入現有房間</h2>
+          <button onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800">← 返回</button>
         </div>
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-zinc-400">請輸入 4 位數房間代碼 (Room Code)</label>
-          <input type="text" id="join-room-code-input" maxlength="4" placeholder="例如: 8492"
-            oninput="this.value = this.value.toUpperCase()"
-            class="w-full bg-black border border-zinc-700 text-center font-number text-3xl tracking-[0.4em] text-amber-400 py-3.5 rounded-xl focus:outline-none focus:border-amber-500 uppercase" />
-        </div>
+
+        <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">輸入 4 位數房間代碼</label>
+        <input id="join-room-code-input" type="text" maxlength="4" placeholder="例如：8492"
+          class="w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-3xl font-black tracking-[0.4em] text-emerald-400 uppercase mb-6 focus:outline-none" />
+
         <button onclick="confirmJoinRoom()"
-          class="w-full py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-black text-sm tracking-wider shadow-lg transition-all">
-          ✅ 確認加入房間
+          class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950/50 transition">
+          確認加入房間 →
         </button>
       </div>
 
-      <!-- Step 2B: Create Room Form -->
-      <div id="lobby-step-create" class="hidden space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-black text-white">👑 創建新房間設定</h3>
-          <button onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white underline">返回</button>
+      <!-- Step 2B: Create Room Form (Host) -->
+      <div id="lobby-step-create" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-xl font-black text-white">👑 創建新房間 (主持設定)</h2>
+          <button onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800">← 返回</button>
         </div>
 
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-zinc-400">選擇遊戲人數模式 (5 - 10 人局)</label>
-          <div class="grid grid-cols-3 gap-2" id="mode-selector-grid">
-            <button type="button" onclick="selectRoomMode(5)" data-mode="5" class="mode-btn py-3 rounded-xl border border-zinc-700 bg-zinc-950 font-black text-sm text-zinc-300">5 人局</button>
-            <button type="button" onclick="selectRoomMode(6)" data-mode="6" class="mode-btn py-3 rounded-xl border border-zinc-700 bg-zinc-950 font-black text-sm text-zinc-300">6 人局</button>
-            <button type="button" onclick="selectRoomMode(7)" data-mode="7" class="mode-btn py-3 rounded-xl border border-zinc-700 bg-zinc-950 font-black text-sm text-zinc-300">7 人局</button>
-            <button type="button" onclick="selectRoomMode(8)" data-mode="8" class="mode-btn py-3 rounded-xl border-2 border-red-500 bg-red-950/60 font-black text-sm text-white">8 人局</button>
-            <button type="button" onclick="selectRoomMode(9)" data-mode="9" class="mode-btn py-3 rounded-xl border border-zinc-700 bg-zinc-950 font-black text-sm text-zinc-300">9 人局</button>
-            <button type="button" onclick="selectRoomMode(10)" data-mode="10" class="mode-btn py-3 rounded-xl border border-zinc-700 bg-zinc-950 font-black text-sm text-zinc-300">10 人局</button>
-          </div>
+        <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">選擇參賽人數模式</label>
+        <div id="mode-selector-grid" class="grid grid-cols-3 gap-2.5 mb-5">
+          <button type="button" onclick="selectRoomMode(5)" data-mode="5" class="mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition">5 人局</button>
+          <button type="button" onclick="selectRoomMode(6)" data-mode="6" class="mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition">6 人局</button>
+          <button type="button" onclick="selectRoomMode(7)" data-mode="7" class="mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition">7 人局</button>
+          <button type="button" onclick="selectRoomMode(8)" data-mode="8" class="mode-option-btn py-3 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-amber-300 font-black text-sm transition">8 人局 (標準)</button>
+          <button type="button" onclick="selectRoomMode(9)" data-mode="9" class="mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition">9 人局</button>
+          <button type="button" onclick="selectRoomMode(10)" data-mode="10" class="mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition">10 人局</button>
         </div>
 
-        <!-- 動態規則預覽卡片 -->
-        <div id="mode-rules-preview" class="bg-black/70 border border-zinc-800 rounded-xl p-3.5 space-y-1.5 text-xs">
-          <div class="font-bold text-amber-400">📋 當前模式平衡規則解鎖門檻：</div>
-          <div class="text-zinc-300">• 基礎天秤：開局全員適用（平均數 × 0.8）</div>
-          <div class="text-zinc-300" id="preview-dup-rule">• 同數無效：剩餘 <strong>5 人</strong> 或以下解鎖</div>
-          <div class="text-zinc-300" id="preview-prec-rule">• 精準重擊：剩餘 <strong>3 人</strong> 或以下解鎖</div>
+        <!-- Mode Dynamic Rules Preview -->
+        <div id="create-mode-rules-preview" class="p-4 rounded-2xl bg-zinc-950/90 border border-zinc-800 text-xs text-zinc-300 space-y-1.5 mb-6">
+          <div class="font-bold text-amber-400">📋 8 人局平衡規則門檻：</div>
+          <div>• 基礎規則：全場平均數 × 0.8，最接近者勝出（其餘扣 1 分）</div>
+          <div>• 【同數無效】解鎖條件：存活人數 ≤ <span class="text-white font-bold">5 人</span></div>
+          <div>• 【精準重擊】解鎖條件：存活人數 ≤ <span class="text-red-400 font-bold">3 人</span>（貼近目標者使對手扣 2 分）</div>
         </div>
 
         <button onclick="confirmCreateRoom()"
-          class="w-full py-3.5 rounded-xl bg-red-700 hover:bg-red-600 text-white font-black text-sm tracking-wider shadow-lg transition-all">
-          🎲 生成房間代碼並開啟大廳
+          class="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-base shadow-lg shadow-amber-950/50 transition">
+          生成房間代碼並進入等待室 →
         </button>
       </div>
 
-      <!-- Step 3: Waiting Room (Lobby Roster) -->
-      <div id="lobby-step-waiting" class="hidden space-y-4">
-        <div class="bg-black/80 border border-zinc-700 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>
-            <div class="text-[11px] text-zinc-400">房間代碼 (請分享給參加者輸入)</div>
-            <div id="display-room-code" class="font-number text-4xl font-black tracking-[0.3em] text-amber-400">----</div>
-          </div>
-          <div class="text-center sm:text-right">
-            <div class="text-xs font-bold text-white"><span id="waiting-mode-label">8</span> 人對戰模式</div>
-            <div class="text-xs text-emerald-400 font-bold mt-1">已就緒：<span id="waiting-joined-count">0</span> / <span id="waiting-total-count">8</span> 人</div>
+      <!-- Step 3: Waiting Room -->
+      <div id="lobby-step-waiting" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <span class="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold">
+            <span id="waiting-mode-label">8</span> 人對戰模式
+          </span>
+          <button onclick="leaveLobbyRoom()" class="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/50">
+            離開房間
+          </button>
+        </div>
+
+        <!-- Room Code Display -->
+        <div class="bg-zinc-950 border-2 border-dashed border-amber-500/60 rounded-2xl p-4 text-center mb-6">
+          <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">請參加者輸入此房間代碼</div>
+          <div id="display-room-code" class="font-number text-4xl sm:text-5xl font-black text-amber-400 tracking-[0.35em] select-all">
+            ----
           </div>
         </div>
 
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-zinc-300">房間玩家名單</span>
-            <button id="btn-fill-ai-lobby" onclick="fillRemainingWithAi()" class="text-[11px] px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-zinc-700 font-bold">
-              🤖 一鍵補齊模擬玩家 (測試用)
-            </button>
+        <!-- Joined Roster -->
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-bold text-white">
+            已加入參賽者 (<span id="waiting-joined-count" class="text-emerald-400 font-number">0</span> / <span id="waiting-total-count" class="font-number">8</span>)
           </div>
-          <div id="lobby-roster-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto num-grid-scroll p-1"></div>
+          <button id="btn-fill-ai-lobby" onclick="fillRemainingWithAi()"
+            class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition">
+            🤖 一鍵補齊 AI 玩家
+          </button>
         </div>
 
-        <div id="host-start-controls" class="pt-2 space-y-2">
-          <button id="btn-lobby-start-game" onclick="startGameFromLobby()" disabled
-            class="w-full py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-black text-sm tracking-wider shadow-lg transition-all">
-            ⏳ 等待齊人中...
-          </button>
-          <button onclick="leaveLobbyRoom()" class="w-full py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 text-xs font-bold border border-zinc-800">
-            退出房間
-          </button>
-        </div>
+        <div id="lobby-roster-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6"></div>
+
+        <button id="btn-lobby-start-game" onclick="startGameFromLobby()" disabled
+          class="w-full py-4 rounded-2xl bg-emerald-600 disabled:bg-zinc-800 disabled:text-zinc-500 hover:bg-emerald-500 text-white font-black text-base transition shadow-lg">
+          ⏳ 等待齊人中...
+        </button>
       </div>
     </div>
   </div>
 
-
-  <!-- ================= Main Game Header (Hidden in Lobby) ================= -->
-  <header id="game-main-header" class="hidden bg-black/95 border-b border-zinc-800 px-3 py-2 z-40 sticky top-0 backdrop-blur-md">
+  <!-- ================= MAIN TOP NAVIGATION HEADER (In-Game) ================= -->
+  <header id="game-main-header" class="hidden sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800 px-3 sm:px-6 py-2.5">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-950/80 border border-red-800 text-red-400 font-bold text-xs">
-          <span>♦ 天秤審判 (<span id="header-mode-count">8</span>人局)</span>
+      <!-- Left Info -->
+      <div class="flex items-center gap-2.5">
+        <span class="text-red-500 text-xl">♦</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-title font-black text-sm sm:text-base text-white tracking-wider">天秤審判</span>
+            <span class="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 font-number text-xs text-amber-400 font-bold">
+              房號 #<span id="header-room-code">8888</span>
+            </span>
+            <span class="hidden sm:inline-block px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 text-xs">
+              <span id="header-mode-count">8</span>人局
+            </span>
+          </div>
         </div>
-        <span class="text-[11px] font-number tracking-widest bg-zinc-900 border border-zinc-700 px-2 py-1 rounded text-amber-400">
-          房號: <strong id="header-room-code">----</strong>
-        </span>
       </div>
 
-      <div class="flex items-center gap-1.5 flex-wrap">
+      <!-- Center / Right View Switchers -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
         <button id="nav-btn-player" onclick="switchMainView('player')"
-          class="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-200 text-xs font-bold transition-all border border-zinc-700">
+          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-black transition">
           📱 參加者端
         </button>
         <button id="nav-btn-projector" onclick="requestViewAccess('projector')"
-          class="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-200 text-xs font-bold transition-all border border-zinc-700">
+          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
           🖥️ 投影大螢幕
         </button>
         <button id="nav-btn-host" onclick="requestViewAccess('host')"
-          class="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-200 text-xs font-bold transition-all border border-zinc-700">
+          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
           🛠️ 主持後台
         </button>
         <button id="nav-btn-ai" onclick="requestViewAccess('ai')"
-          class="px-2.5 py-1.5 rounded-lg bg-red-950 text-red-300 text-xs font-bold transition-all border border-red-800">
-          🤖 AI 測試控台
+          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
+          🤖 AI 測試
         </button>
-        <button id="nav-btn-lobby" onclick="returnToLobby()"
-          class="px-2.5 py-1.5 rounded-lg bg-amber-950/90 hover:bg-amber-900 text-amber-200 text-xs font-bold transition-all border border-amber-700">
+        <button onclick="returnToLobby()"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800/60 transition ml-1">
           🏠 返回大廳
         </button>
       </div>
     </div>
   </header>
 
-  <!-- ================= View 1: Player Controller ================= -->
-  <div id="view-player" class="hidden flex-1 flex flex-col max-w-md mx-auto w-full p-3 gap-3 justify-between">
-    <div class="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-600 flex items-center justify-center font-number font-bold text-white text-xs">
-          P1
+  <!-- ================= VIEW 1: PLAYER CONTROLLER VIEW ================= -->
+  <main id="view-player" class="hidden flex-1 max-w-2xl w-full mx-auto p-3 sm:p-5 flex flex-col justify-between">
+    <!-- Player Status Card -->
+    <div class="glass-panel rounded-2xl p-4 mb-3 border border-zinc-800">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <div class="flex items-center gap-2.5 flex-1 min-w-0">
+          <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 font-number font-bold text-white text-xs shrink-0">P1</span>
+          <input id="player-name-input" type="text" maxlength="12" onchange="updatePlayerName(this.value)"
+            class="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1 text-sm font-bold text-white w-full max-w-[160px] focus:outline-none focus:border-amber-500" />
         </div>
-        <div>
-          <div class="flex items-center gap-1.5">
-            <input type="text" id="player-name-input" onchange="updatePlayerName(this.value)" value="參賽者 1"
-              class="bg-zinc-950 text-white font-bold text-xs px-2 py-0.5 rounded border border-zinc-700 w-28 focus:outline-none focus:border-red-500" />
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="text-right">
+            <div class="text-[10px] text-zinc-400 uppercase">回合</div>
+            <div class="font-number font-black text-base text-white">R<span id="player-round-num">1</span></div>
           </div>
-          <div class="text-[11px] text-zinc-400 mt-1">目前生命分：<span id="player-score-label" class="font-number font-bold text-white text-sm">10</span> / 10 (歸0淘汰)</div>
+          <div class="h-7 w-[1px] bg-zinc-800"></div>
+          <div class="text-right">
+            <div class="text-[10px] text-zinc-400 uppercase">剩餘生命分</div>
+            <div id="player-score-display" class="font-number font-black text-2xl text-emerald-400">10</div>
+          </div>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <div class="text-right mr-1">
-          <div class="text-[10px] text-zinc-500">已選數字</div>
-          <div id="player-selected-display" class="font-number text-2xl font-bold text-amber-400 leading-none">--</div>
+      <!-- Active Rules Banner for Player -->
+      <div id="player-active-rules-bar" class="text-[11px] bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-300 flex flex-wrap items-center gap-2">
+        <span class="text-amber-400 font-bold">生效規則：</span>
+        <span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200">平均 × 0.8</span>
+        <span id="player-rule-dup-badge" class="hidden px-2 py-0.5 rounded bg-purple-950 border border-purple-700 text-purple-300 font-bold">同數無效</span>
+        <span id="player-rule-prec-badge" class="hidden px-2 py-0.5 rounded bg-red-950 border border-red-700 text-red-300 font-bold">精準重擊 (扣2分)</span>
+      </div>
+    </div>
+
+    <!-- Eliminated Banner (if player is OUT) -->
+    <div id="player-eliminated-banner" class="hidden glass-panel rounded-2xl p-6 text-center border-2 border-red-700/80 my-4">
+      <div class="text-4xl mb-2">💀</div>
+      <h2 class="text-2xl font-black text-red-500 mb-1">你已被淘汰 (OUT)</h2>
+      <p class="text-xs text-zinc-400">你的生命分數已歸零，請觀戰直至本局結束。</p>
+    </div>
+
+    <!-- Round Result Banner for Player (when revealed) -->
+    <div id="player-revealed-banner" class="hidden glass-panel rounded-2xl p-4 mb-3 border border-amber-500/60 text-center">
+      <div class="text-xs text-zinc-400">本回合目標答案 (平均 × 0.8)</div>
+      <div id="player-revealed-answer" class="font-number text-3xl font-black text-amber-400 my-1">--</div>
+      <div id="player-revealed-outcome" class="text-sm font-bold text-white">--</div>
+    </div>
+
+    <!-- Number Grid 1 - 100 -->
+    <div id="player-numberpad-wrapper" class="glass-panel rounded-2xl p-3 sm:p-4 mb-3">
+      <div class="flex items-center justify-between mb-2.5">
+        <span class="text-xs font-bold text-zinc-400">請選擇數字 (1 – 100)</span>
+        <span class="text-xs text-zinc-400">
+          目前選擇：<strong id="player-selected-preview" class="font-number text-lg text-amber-400">--</strong>
+        </span>
+      </div>
+      <div id="player-number-grid" class="grid grid-cols-10 gap-1 sm:gap-1.5"></div>
+    </div>
+
+    <!-- Lock Action Button -->
+    <button id="btn-player-lock" onclick="lockPlayerAnswer()"
+      class="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 text-black font-black text-lg tracking-wider shadow-lg transition">
+      🔒 鎖定並提交數字
+    </button>
+  </main>
+
+  <!-- ================= VIEW 2: PROJECTOR BIG SCREEN VIEW ================= -->
+  <main id="view-projector" class="hidden flex-1 flex flex-col justify-between p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
+    <!-- Top Status & Target Scale Bar -->
+    <div class="glass-panel rounded-3xl p-4 sm:p-6 border border-zinc-800 mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="px-4 py-1.5 rounded-xl bg-red-950/80 border border-red-700/70 font-number font-black text-xl sm:text-2xl text-red-400">
+            ROUND <span id="proj-round-num">1</span>
+          </div>
+          <div id="proj-phase-badge" class="px-4 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-sm sm:text-base animate-pulse">
+            ⏳ 全場思考與鎖定中...
+          </div>
         </div>
-        <button id="btn-submit-number" onclick="lockPlayerAnswer()" disabled
-          class="px-4 py-2.5 rounded-lg bg-red-700 hover:bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-sm tracking-wider transition-all shadow">
-          鎖定答案
+
+        <!-- Active Rules Indicators -->
+        <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+          <span class="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 font-bold">
+            📐 平均數 × 0.8
+          </span>
+          <span id="proj-rule-dup" class="px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold">
+            🚫 同數無效 (≤5人)
+          </span>
+          <span id="proj-rule-prec" class="px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold">
+            ⚡ 精準重擊 (≤3人)
+          </span>
+        </div>
+      </div>
+
+      <!-- Target Result Display -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center bg-zinc-950/90 rounded-2xl p-4 border border-zinc-800/80">
+        <div class="text-center md:text-left">
+          <div class="text-xs text-zinc-400 uppercase tracking-wider">有效數字平均數</div>
+          <div id="proj-avg-display" class="font-number text-2xl sm:text-3xl font-black text-zinc-200">--.--</div>
+        </div>
+
+        <div class="text-center border-y md:border-y-0 md:border-x border-zinc-800 py-2 md:py-0">
+          <div class="text-xs text-amber-400 font-bold uppercase tracking-widest">最終目標值 (平均 × 0.8)</div>
+          <div id="proj-target-display" class="font-number text-4xl sm:text-6xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+            ??.??
+          </div>
+        </div>
+
+        <div class="text-center md:text-right">
+          <div class="text-xs text-zinc-400 uppercase tracking-wider">本回合裁決結果</div>
+          <div id="proj-notice-display" class="text-sm sm:text-base font-bold text-emerald-400 mt-1">
+            等待所有參賽者鎖定數字
+          </div>
+        </div>
+      </div>
+
+      <!-- Decorative Scale Ruler -->
+      <div class="mt-4 pt-2 flex flex-col items-center">
+        <div id="proj-ruler-ticks" class="w-full flex items-end justify-between px-2"></div>
+        <div class="w-full flex justify-between text-[10px] font-number text-zinc-500 mt-1 px-1">
+          <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Players Cards Grid (Auto adapts 5 to 10 columns) -->
+    <div id="proj-players-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 my-auto"></div>
+  </main>
+
+  <!-- ================= VIEW 3: HOST BACKSTAGE CONTROL VIEW ================= -->
+  <main id="view-host" class="hidden flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-5">
+    <!-- Top Primary Control Bar -->
+    <div class="glass-panel rounded-2xl p-4 sm:p-5 border border-zinc-800 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">主持控台</span>
+          <h2 class="text-lg sm:text-xl font-black text-white">第 <span id="host-round-num" class="text-amber-400 font-number">1</span> 回合監控</h2>
+        </div>
+        <p class="text-xs text-zinc-400 mt-1">
+          鎖定進度：<span id="host-lock-progress" class="font-number font-bold text-emerald-400">0 / 8</span> · 存活人數：<span id="host-alive-count" class="font-number font-bold text-white">8</span>
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button id="btn-bgm-toggle" onclick="toggleBGM()"
+          class="px-4 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm border border-zinc-700 transition">
+          🔇 緊張音效：關
+        </button>
+        <button id="btn-host-reveal" onclick="revealAndCalculateRound()"
+          class="px-5 py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-black text-sm sm:text-base shadow-lg shadow-red-950/60 transition">
+          ⚡ 開牌結算 (REVEAL)
+        </button>
+        <button id="btn-host-next" onclick="startNextRound()"
+          class="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm sm:text-base shadow-lg transition">
+          ➡️ 下一回合 (NEXT)
         </button>
       </div>
     </div>
 
-    <div id="player-eliminated-banner" class="hidden bg-red-950/90 border border-red-700 rounded-xl p-3 text-center">
-      <div class="text-base font-black text-red-400 tracking-widest">GAME OVER — 你已被淘汰</div>
-    </div>
-
-    <div class="bg-zinc-950/90 border border-zinc-800 rounded-xl p-2.5 flex-1 flex flex-col min-h-[260px]">
-      <div class="flex items-center justify-between px-1 pb-2 text-xs text-zinc-400">
-        <span>選擇整數 (1 - 100) — 鎖定前可隨意更改</span>
-        <span id="player-lock-status" class="text-amber-400 font-medium">請選擇數字</span>
-      </div>
-      <div id="number-pad-grid" class="grid grid-cols-10 gap-1 flex-1 num-grid-scroll overflow-y-auto"></div>
-    </div>
-
-    <!-- Dynamic Detailed Rules Guide Panel -->
-    <div class="bg-zinc-900/95 border border-zinc-800 rounded-xl p-3 space-y-2">
-      <div class="flex items-center justify-between border-b border-zinc-800 pb-1.5">
-        <span class="text-xs font-bold tracking-wider text-zinc-200">天秤規則核心 (<span id="player-mode-title">8</span>人局動態門檻)</span>
-        <span class="text-xs text-zinc-400">存活：<strong id="player-alive-indicator" class="text-red-400 font-number text-sm">8</strong> 人</span>
-      </div>
-
-      <div class="space-y-1.5 text-xs">
-        <div id="rule-card-base" class="p-2 rounded-lg border rule-unlocked text-zinc-100">
-          <div class="flex items-center justify-between font-bold text-white mb-0.5">
-            <span>【基礎天秤】平均數 × 0.8</span>
-            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">生效中</span>
-          </div>
-          <p class="text-[11px] text-zinc-300">所有人生存時適用。計算全體選擇數字之平均數乘以 0.8 作為目標值。最接近目標者勝出，其餘人扣 1 分。</p>
-        </div>
-        <div id="rule-card-dup" class="p-2 rounded-lg border border-zinc-800 bg-black/50 text-zinc-500">
-          <div class="flex items-center justify-between font-bold mb-0.5">
-            <span>【同數無效】多人同數作廢</span>
-            <span id="rule-badge-dup" class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800">剩餘 5 人解鎖</span>
-          </div>
-          <p id="rule-desc-dup" class="text-[11px]">當存活降至指定人數或以下，若有多位玩家選擇完全相同的數字，該數字直接作廢，不計入平均數計算。</p>
-        </div>
-        <div id="rule-card-prec" class="p-2 rounded-lg border border-zinc-800 bg-black/50 text-zinc-500">
-          <div class="flex items-center justify-between font-bold mb-0.5">
-            <span>【精準重擊】貼近目標雙倍懲罰</span>
-            <span id="rule-badge-prec" class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800">剩餘 3 人解鎖</span>
-          </div>
-          <p id="rule-desc-prec" class="text-[11px]">當存活降至指定人數或以下，若勝出者極致貼近目標（誤差 ≤ 0.5），其餘落敗者承受雙倍 (-2分) 扣分。</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- ================= View 2: Projector Screen (Landscape) ================= -->
-  <div id="view-projector" class="hidden flex-1 flex flex-col justify-between relative overflow-hidden select-none h-[calc(100vh-45px)] px-4 py-2">
-    <div class="absolute top-2 right-4 z-20 flex items-center gap-2.5 opacity-85 pointer-events-none">
-      <div class="text-right">
-        <div class="text-[10px] tracking-[0.2em] text-zinc-400 font-bold">KING OF DIAMONDS</div>
-        <div class="text-xs font-black tracking-widest text-white">天秤審判</div>
-      </div>
-      <div class="w-8 h-8 border border-white/70 rotate-45 flex items-center justify-center bg-black/50">
-        <span class="-rotate-45 font-black text-xs text-white">♦K</span>
-      </div>
-    </div>
-
-    <div class="absolute top-2 left-4 z-20 flex items-center gap-2 bg-black/60 border border-zinc-800/80 px-3 py-1 rounded-lg backdrop-blur-sm">
-      <span class="text-xs text-zinc-400">第 <strong id="proj-round-num" class="text-white">1</strong> 回合</span>
-      <span class="text-zinc-700">|</span>
-      <span class="text-xs text-zinc-400">存活 <strong id="proj-alive-count" class="text-red-400">8</strong>/<span id="proj-total-count">8</span></span>
-      <span class="text-zinc-700">|</span>
-      <span class="text-xs text-amber-400"><span id="proj-phase-badge">選號中 (絕對保密)</span></span>
-      <span class="text-zinc-700">|</span>
-      <button id="bgm-toggle-btn" onclick="toggleBGM(0.1)" class="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2 py-0.5 rounded border border-zinc-700 transition-all">🔇 開啟背景音樂</button>
-    </div>
-
-    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-      <svg class="w-[75vw] max-w-[850px] h-auto opacity-[0.18]" viewBox="0 0 900 580" fill="none" stroke="#d4d4d8" stroke-width="1.4">
-        <polygon points="450,18 475,62 450,112 425,62" />
-        <line x1="450" y1="18" x2="450" y2="545" />
-        <line x1="425" y1="62" x2="475" y2="62" />
-        <path d="M180,145 Q315,125 450,112 Q585,125 720,145" stroke-width="1.8" />
-        <circle cx="450" cy="112" r="6" fill="#06080a" />
-        <line x1="180" y1="145" x2="125" y2="290" />
-        <line x1="180" y1="145" x2="235" y2="290" />
-        <path d="M105,290 Q180,322 255,290 Z" />
-        <line x1="720" y1="145" x2="665" y2="290" />
-        <line x1="720" y1="145" x2="775" y2="290" />
-        <path d="M645,290 Q720,322 795,290 Z" />
-      </svg>
-    </div>
-
-    <main class="relative z-10 flex-1 flex flex-col items-center justify-center w-full max-w-[1440px] mx-auto pt-6 pb-2">
-      <div id="proj-players-grid" class="w-full grid grid-cols-8 gap-2 items-start"></div>
-
-      <div class="w-full my-3 relative flex items-center">
-        <div class="w-full h-[1.5px] bg-zinc-500/60 relative flex justify-between items-center" id="proj-ruler-ticks"></div>
-      </div>
-
-      <div id="proj-numbers-grid" class="w-full grid grid-cols-8 gap-2"></div>
-
-      <div class="mt-4 flex items-center justify-center gap-5">
-        <div class="text-2xl sm:text-3xl font-bold tracking-[0.3em] text-zinc-100">答案</div>
-        <div class="ivory-box w-44 sm:w-56 h-14 sm:h-16 flex items-center justify-center border border-zinc-300">
-          <span id="proj-answer-value" class="font-number text-4xl sm:text-5xl font-bold tracking-tight text-zinc-900">--.--</span>
-        </div>
-      </div>
-
-      <div class="mt-2 min-h-[22px] text-center">
-        <span id="proj-notice-text" class="text-xs tracking-widest text-red-400 font-bold"></span>
-      </div>
-    </main>
-  </div>
-
-
-  <!-- ================= View 3: Host Backstage ================= -->
-  <div id="view-host" class="hidden flex-1 flex flex-col max-w-6xl mx-auto w-full p-4 gap-4 overflow-y-auto">
-    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-5 shadow-2xl">
-      <div class="border-b border-zinc-800 pb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-xl font-black text-white flex items-center gap-2">
-            <span>🛠️ 主持後台控制中心 (God-Mode)</span>
-          </h2>
-          <p class="text-xs text-zinc-400 mt-0.5">實時監控所有參加者選號，主持開牌前數字絕不外洩。</p>
-        </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <button id="btn-reveal-round" onclick="revealAndCalculateRound()"
-            class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold text-xs shadow-lg transition-all">
-            ⚡ 開牌結算 (REVEAL)
-          </button>
-          <button id="btn-next-round" onclick="startNextRound()" disabled
-            class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-xs transition-all">
-            🔄 下一回合
-          </button>
-        </div>
-      </div>
-
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold tracking-wider text-zinc-300">所有參加者即時選號與狀態監控 (主持人可見)</h3>
-        <div id="host-players-monitor-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3"></div>
-      </div>
-
-      <!-- 放大版即時預測橫幅置於下方 -->
-      <div id="host-prediction-container" class="mt-4"></div>
-
-      <!-- 返回上一Round與重置放係最下方 -->
-      <div class="pt-4 border-t border-zinc-800 flex items-center justify-between gap-3 flex-wrap">
-        <button id="btn-prev-round" onclick="returnToPreviousRound()" disabled
-          class="px-4 py-2.5 rounded-xl bg-amber-800 hover:bg-amber-700 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-xs transition-all shadow">
-          ↩️ 返回上一 Round (還原分數並解除鎖定)
+    <!-- Live Players Status Monitoring Grid -->
+    <div class="glass-panel rounded-2xl p-4 sm:p-5 border border-zinc-800">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-bold text-zinc-300">👥 參賽者即時選號與分數監控（已淘汰者自動灰階顯示）</h3>
+        <button onclick="triggerAllAiThinkAndLock()" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition">
+          🤖 讓所有未鎖定 AI 立即出牌
         </button>
-        <div class="flex items-center gap-2 flex-wrap">
-          <button onclick="simulateDisconnect()" class="px-3.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs border border-zinc-700 shadow">
-            📡 測試斷線暫停
-          </button>
-          <button onclick="returnToLobby()" class="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs border border-zinc-700 shadow">
-            🏠 返回房間大廳
-          </button>
-          <button onclick="resetEntireGame()" class="px-4 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-900 text-red-400 font-bold text-xs border border-zinc-800 shadow">
-            ⚠️ 重置本局分數
-          </button>
+      </div>
+      <div id="host-players-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+    </div>
+
+    <!-- Active Rules Reference Panel (Only Core Rules) -->
+    <div class="glass-panel rounded-2xl p-4 border border-zinc-800">
+      <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2.5">📜 本局生效規則檢核</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+        <div class="p-3 rounded-xl bg-zinc-950 border border-emerald-800/60">
+          <div class="font-bold text-emerald-400 mb-0.5">✅ 規則 1：平均數 × 0.8</div>
+          <div class="text-zinc-400">全場有效數字平均值乘以 0.8，最接近者勝出，其餘扣 1 分。</div>
+        </div>
+        <div id="host-rule-card-dup" class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+          <div class="font-bold text-purple-400 mb-0.5">規則 2：同數無效 (<span id="host-dup-threshold-label">≤5人</span>解鎖)</div>
+          <div class="text-zinc-400">若有兩位或以上玩家選擇相同數字，該數字直接作廢且不計入平均。</div>
+        </div>
+        <div id="host-rule-card-prec" class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+          <div class="font-bold text-red-400 mb-0.5">規則 3：精準重擊 (<span id="host-prec-threshold-label">≤3人</span>解鎖)</div>
+          <div class="text-zinc-400">存活人數達標時，勝出者若誤差 ≤ 1（或完全命中），落敗者扣 2 分。</div>
         </div>
       </div>
     </div>
-  </div>
 
-
-  <!-- ================= View 4: AI Test Panel ================= -->
-  <div id="view-ai" class="hidden flex-1 flex flex-col max-w-4xl mx-auto w-full p-4 gap-4 overflow-y-auto">
-    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-2xl">
-      <div class="border-b border-zinc-800 pb-4 flex items-center justify-between">
+    <!-- Large Pre-Reveal Winner Prediction Banner (Placed prominently below) -->
+    <div id="host-winner-preview-box" class="rounded-3xl p-6 bg-gradient-to-r from-amber-950/90 via-zinc-900 to-amber-950/90 border-2 border-amber-500/70 shadow-2xl">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <h2 class="text-xl font-black text-white flex items-center gap-2">
-            <span>🤖 天秤 AI 模擬與測試控台</span>
-          </h2>
-          <p class="text-xs text-zinc-400 mt-1">可一鍵模擬所有 AI 參加者出牌與測試完整賽局。</p>
-        </div>
-        <div>
-          <button onclick="runAiCompleteRound()" class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold text-xs shadow-lg">
-            ⚡ 一鍵讓 AI 自動出牌並結算
-          </button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-black/60 border border-zinc-800 rounded-xl p-4 space-y-3">
-          <h3 class="text-xs font-bold tracking-wider text-zinc-300">AI 狀態清單</h3>
-          <div id="ai-status-list" class="space-y-2 max-h-64 overflow-y-auto num-grid-scroll"></div>
-        </div>
-
-        <div class="bg-black/60 border border-zinc-800 rounded-xl p-4 flex flex-col justify-between space-y-4">
-          <div class="space-y-2">
-            <h3 class="text-xs font-bold tracking-wider text-zinc-300">快速測試指令</h3>
-            <p class="text-xs text-zinc-400">你可以讓所有 AI 立即隨機出牌，或一鍵切換至投影大螢幕檢視效果。</p>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black tracking-wider mb-2">
+            <span>🔮 開牌前即時勝者預測 (LIVE PREVIEW)</span>
           </div>
-          <div class="grid grid-cols-2 gap-2.5">
-            <button onclick="triggerAllAiThinkAndLock()" class="py-2.5 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs border border-zinc-700">
-              🤖 讓所有 AI 立即出牌
-            </button>
-            <button onclick="requestViewAccess('projector')" class="py-2.5 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs">
-              🖥️ 切換至投影大螢幕
-            </button>
+          <div id="host-preview-winner-name" class="text-2xl sm:text-3xl font-black text-white">
+            等待所有存活玩家鎖定數字...
           </div>
+          <div id="host-preview-detail" class="text-xs sm:text-sm text-zinc-300 mt-1">
+            當全體鎖定後，此處將自動計算目標答案與暫定勝出者。
+          </div>
+        </div>
+        <div class="text-center sm:text-right bg-black/50 px-6 py-3 rounded-2xl border border-amber-500/40 shrink-0">
+          <div class="text-[11px] text-amber-400 font-bold uppercase">預測目標答案</div>
+          <div id="host-preview-target" class="font-number text-3xl sm:text-4xl font-black text-amber-400">--.--</div>
         </div>
       </div>
     </div>
-  </div>
 
+    <!-- Bottom Utility Bar: Return to Previous Round & Reset Game (Placed at very bottom) -->
+    <div class="mt-auto pt-4 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3">
+      <button onclick="simulateDisconnect()"
+        class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-bold border border-zinc-700 transition">
+        📡 測試斷線暫停 (10分鐘超時機制)
+      </button>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button onclick="returnToPreviousRound()"
+          class="px-5 py-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/50 font-black text-xs sm:text-sm transition">
+          ↩️ 返回上一 ROUND (還原分數並解除鎖定)
+        </button>
+        <button onclick="resetEntireGame()"
+          class="px-5 py-3 rounded-xl bg-red-950/60 hover:bg-red-900/70 text-red-300 border border-red-800/60 font-bold text-xs sm:text-sm transition">
+          🔄 重置全場 (全部回復 10 分)
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= VIEW 4: AI SIMULATION & TEST CONSOLE ================= -->
+  <main id="view-ai" class="hidden flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6">
+    <div class="glass-panel rounded-3xl p-6 border border-zinc-800">
+      <h2 class="text-xl font-black text-white mb-2">🤖 AI 模擬與快速演練控台</h2>
+      <p class="text-xs text-zinc-400 mb-6">用於單人測試或補齊空位時的 AI 行為控制。</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <button onclick="triggerAllAiThinkAndLock()"
+          class="p-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-left transition shadow-lg">
+          <div class="text-lg mb-1">🧠 讓所有 AI 思考並鎖定</div>
+          <div class="text-xs text-indigo-200 font-normal">所有尚未鎖定的 AI 玩家將根據心理博弈權重自動選號並鎖定。</div>
+        </button>
+
+        <button onclick="runAiCompleteRound()"
+          class="p-5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-left transition shadow-lg">
+          <div class="text-lg mb-1">⚡ 自動補齊出牌並立即開牌結算</div>
+          <div class="text-xs text-rose-200 font-normal">自動為所有未鎖定玩家隨機選號，並直接執行本回合開牌扣分。</div>
+        </button>
+      </div>
+
+      <div id="ai-status-list" class="space-y-2"></div>
+    </div>
+  </main>
 
   <!-- ================= Core JavaScript Engine ================= -->
-  <script>
-    // 不同人數模式的平衡規則門檻配置表
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ================= Cloud Realtime Sync Setup =================
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'king-of-diamonds-scale';
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let myPlayerUid = null;
+    let roomUnsubscribe = null;
+    let isCloudReady = false;
+
+    async function initCloudSync() {
+      const badge = document.getElementById('cloud-status-badge');
+      try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          const firebaseConfig = JSON.parse(__firebase_config);
+          const app = initializeApp(firebaseConfig);
+          db = getFirestore(app);
+          auth = getAuth(app);
+
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } else {
+            await signInAnonymously(auth);
+          }
+          currentUser = auth.currentUser;
+          myPlayerUid = currentUser ? currentUser.uid : ('user_' + Math.random().toString(36).slice(2, 10));
+          isCloudReady = true;
+          if (badge) {
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> 雲端即時多人連線已就緒`;
+          }
+        } else {
+          myPlayerUid = 'local_' + Math.random().toString(36).slice(2, 10);
+          if (badge) {
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> 單機 / 同瀏覽器模式已就緒`;
+          }
+        }
+      } catch (err) {
+        console.error('Cloud init error:', err);
+        myPlayerUid = 'local_' + Math.random().toString(36).slice(2, 10);
+        if (badge) {
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> 離線單機模式已就緒`;
+        }
+      }
+    }
+
+    function getRoomDocRef(code) {
+      return doc(db, 'artifacts', appId, 'public', 'data', 'scale_rooms', code);
+    }
+
+    async function syncFullRoomStateToCloud() {
+      if (!isCloudReady || !db || !currentUser || !lobbyState.roomCode) return;
+      try {
+        const roomRef = getRoomDocRef(lobbyState.roomCode);
+        await setDoc(roomRef, {
+          roomCode: lobbyState.roomCode,
+          maxPlayers: lobbyState.maxPlayers,
+          hostUid: lobbyState.isHost ? myPlayerUid : (gameState.hostUid || ''),
+          hostName: lobbyState.hostName || '',
+          status: document.getElementById('view-lobby').classList.contains('hidden') ? 'playing' : 'waiting',
+          lobbyPlayers: lobbyState.joinedPlayers,
+          gameState: {
+            roomCode: gameState.roomCode,
+            maxPlayers: gameState.maxPlayers,
+            round: gameState.round,
+            phase: gameState.phase,
+            answer: gameState.answer,
+            winnerIds: gameState.winnerIds,
+            invalidNumbers: gameState.invalidNumbers,
+            roundNotice: gameState.roundNotice,
+            players: gameState.players
+          },
+          updatedAt: Date.now()
+        }, { merge: true });
+      } catch (e) {
+        console.error('Sync room error:', e);
+      }
+    }
+
+    function subscribeToRoom(code) {
+      if (!isCloudReady || !db || !currentUser) return;
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
+
+      const roomRef = getRoomDocRef(code);
+      roomUnsubscribe = onSnapshot(roomRef, (snap) => {
+        if (!snap.exists()) {
+          if (!lobbyState.isHost) {
+            showToast('房間已被主持關閉或不存在', 'warning');
+            returnToLobby();
+          }
+          return;
+        }
+
+        const data = snap.data();
+
+        // 若房間因超時或主持操作重置回大廳
+        if (data.status === 'closed') {
+          if (roomUnsubscribe) {
+            roomUnsubscribe();
+            roomUnsubscribe = null;
+          }
+          clearDisconnectState();
+          document.getElementById('game-main-header').classList.add('hidden');
+          ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
+            document.getElementById(id).classList.add('hidden');
+          });
+          document.getElementById('view-lobby').classList.remove('hidden');
+          backToLobbySelect();
+          showToast('房間已結束並全員返回大廳', 'info');
+          return;
+        }
+
+        // 同步大廳等待室名單
+        if (data.lobbyPlayers) {
+          lobbyState.joinedPlayers = data.lobbyPlayers;
+          lobbyState.maxPlayers = data.maxPlayers || lobbyState.maxPlayers;
+          lobbyState.hostName = data.hostName || lobbyState.hostName;
+          if (!document.getElementById('lobby-step-waiting').classList.contains('hidden')) {
+            renderWaitingRoom();
+          }
+        }
+
+        // 當主持按下「正式開始遊戲」時，所有在等待室的參加者手機自動進入遊戲介面
+        if (data.status === 'playing' && !document.getElementById('view-lobby').classList.contains('hidden')) {
+          if (!lobbyState.isHost && data.gameState) {
+            enterPlayingViewAsParticipant(data.gameState);
+          }
+        }
+
+        // 遊戲進行中的即時資料同步
+        if (data.status === 'playing' && data.gameState) {
+          const remote = data.gameState;
+          const prevPhase = gameState.phase;
+          const prevRound = gameState.round;
+          const prevPlayers = gameState.players || [];
+
+          // 檢查是否有新玩家剛鎖定答案（僅在主持人端／投影畫面播放鎖定音效）
+          if (remote.players && prevPlayers.length === remote.players.length) {
+            const newlyLocked = remote.players.some((rp, idx) => rp.locked && !prevPlayers[idx]?.locked);
+            if (newlyLocked && lobbyState.isHost) {
+              playProjectorLockSound();
+            }
+          }
+
+          // 若開牌結算，播放開牌音效
+          if (prevPhase === 'voting' && remote.phase === 'revealed') {
+            playRevealSound();
+          }
+
+          // 若進入下一回合或返回上一回合，重設本地暫選數字
+          if (prevRound !== remote.round || (prevPhase === 'revealed' && remote.phase === 'voting')) {
+            selectedNumber = null;
+          }
+
+          gameState = {
+            ...gameState,
+            ...remote
+          };
+
+          renderAllViews();
+        }
+      }, (error) => {
+        console.error('Room snapshot error:', error);
+      });
+    }
+
+    // ================= Mode Configurations =================
     const MODE_CONFIGS = {
-      5:  { dupThreshold: 4, precThreshold: 2 },
-      6:  { dupThreshold: 4, precThreshold: 3 },
-      7:  { dupThreshold: 5, precThreshold: 3 },
-      8:  { dupThreshold: 5, precThreshold: 3 },
-      9:  { dupThreshold: 6, precThreshold: 3 },
-      10: { dupThreshold: 7, precThreshold: 4 }
+      5: { duplicateThreshold: 4, precisionThreshold: 2 },
+      6: { duplicateThreshold: 4, precisionThreshold: 3 },
+      7: { duplicateThreshold: 5, precisionThreshold: 3 },
+      8: { duplicateThreshold: 5, precisionThreshold: 3 },
+      9: { duplicateThreshold: 6, precisionThreshold: 3 },
+      10: { duplicateThreshold: 7, precisionThreshold: 4 }
     };
 
-    const SECURITY_PASSCODE = '0808';
-    let authPasscodeVerified = false;
-    let pendingTargetView = null;
-
+    // ================= Global Game State =================
     let lobbyState = {
       roomCode: '',
       maxPlayers: 8,
       isHost: false,
       hostName: '',
-      joinedPlayers: [] // { name, isAi, isHost }
+      joinedPlayers: []
     };
 
     let createdRoomsRegistry = {};
 
     let gameState = {
       roomCode: '8888',
+      hostUid: '',
       maxPlayers: 8,
       round: 1,
       phase: 'voting', // 'voting' | 'revealed'
@@ -588,144 +766,234 @@
 
     let historyStack = [];
     let selectedNumber = null;
+    let authPasscodeVerified = false;
+    let pendingTargetView = null;
 
-    // 斷線暫停與 10 分鐘倒數計時器狀態
+    // Disconnect & 10-minute Timeout State
     let isDisconnected = false;
-    let disconnectTimerInterval = null;
-    let disconnectRemainingSeconds = 600; // 10 分鐘 = 600 秒
+    let disconnectSecondsLeft = 600;
+    let disconnectInterval = null;
 
-    // ================= Web Audio Synthesizer (Sound & BGM) =================
+    // ================= Web Audio Synthesizer =================
     let audioCtx = null;
-    let bgmInterval = null;
-    let isBgmPlaying = false;
+    let bgmPlaying = false;
+    let bgmTimer = null;
 
-    function ensureAudioContext() {
+    function ensureAudioCtx() {
       if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) audioCtx = new AudioContext();
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
       }
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
     }
 
+    // 投影畫面／主持端鎖定提示音效（參加者按數字不會有聲音，直到鎖定才在投影端發出）
     function playProjectorLockSound() {
-      const projView = document.getElementById('view-projector');
-      if (!projView || projView.classList.contains('hidden')) return;
-      ensureAudioContext();
-      if (!audioCtx) return;
-
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(587.33, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.09);
-
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.26);
-    }
-
-    function playRevealSound() {
-      ensureAudioContext();
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime;
-      [220, 277.18, 329.63, 440].forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq, now + i * 0.05);
-        gain.gain.setValueAtTime(0.08, now + i * 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now + i * 0.05);
-        osc.stop(now + 0.75);
-      });
-    }
-
-    function toggleBGM(vol = 0.08) {
-      ensureAudioContext();
-      const btn = document.getElementById('bgm-toggle-btn');
-      if (isBgmPlaying) {
-        clearInterval(bgmInterval);
-        isBgmPlaying = false;
-        if (btn) btn.textContent = '🔇 開啟背景音樂';
-        return;
-      }
-      isBgmPlaying = true;
-      if (btn) btn.textContent = '🔊 背景音樂播放中';
-      const notes = [110, 130.81, 146.83, 130.81, 164.81, 146.83, 130.81, 98];
-      let step = 0;
-      bgmInterval = setInterval(() => {
-        if (!audioCtx || !isBgmPlaying) return;
+      try {
+        ensureAudioCtx();
+        if (!audioCtx) return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(notes[step % notes.length], now);
-        gain.gain.setValueAtTime(vol, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.12); // G5
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start(now);
-        osc.stop(now + 0.48);
-        step++;
-      }, 500);
+        osc.stop(now + 0.26);
+      } catch (e) {}
     }
 
-    // ================= Toast Notification =================
+    function playRevealSound() {
+      try {
+        ensureAudioCtx();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [261.63, 329.63, 392.00, 523.25].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.45);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.46);
+        });
+      } catch (e) {}
+    }
+
+    function toggleBGM() {
+      const btn = document.getElementById('btn-bgm-toggle');
+      if (bgmPlaying) {
+        bgmPlaying = false;
+        clearInterval(bgmTimer);
+        bgmTimer = null;
+        if (btn) btn.textContent = '🔇 緊張音效：關';
+        return;
+      }
+      ensureAudioCtx();
+      bgmPlaying = true;
+      if (btn) btn.textContent = '🔊 緊張音效：開';
+      let beat = 0;
+      bgmTimer = setInterval(() => {
+        if (!bgmPlaying || !audioCtx) return;
+        try {
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(beat % 2 === 0 ? 65.41 : 73.42, now);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.23);
+          beat++;
+        } catch (e) {}
+      }, 650);
+    }
+
+    // ================= Helper Utilities =================
     function showToast(msg, type = 'info') {
       const container = document.getElementById('toast-container');
       if (!container) return;
-      const el = document.createElement('div');
       const colors = {
         info: 'bg-zinc-900 border-zinc-700 text-zinc-100',
-        success: 'bg-emerald-950/95 border-emerald-700 text-emerald-200',
-        error: 'bg-red-950/95 border-red-700 text-red-200',
-        warning: 'bg-amber-950/95 border-amber-700 text-amber-200'
+        success: 'bg-emerald-950/95 border-emerald-600 text-emerald-200',
+        warning: 'bg-amber-950/95 border-amber-500 text-amber-200',
+        error: 'bg-red-950/95 border-red-600 text-red-200'
       };
-      el.className = `px-4 py-2.5 rounded-xl border text-xs font-bold shadow-2xl text-center transition-all duration-300 ${colors[type] || colors.info}`;
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl text-xs sm:text-sm font-bold transition-all duration-300 ${colors[type] || colors.info}`;
       el.textContent = msg;
       container.appendChild(el);
       setTimeout(() => {
         el.style.opacity = '0';
+        el.style.transform = 'translateY(-8px)';
         setTimeout(() => el.remove(), 300);
-      }, 2800);
+      }, 3200);
     }
 
-    // ================= Avatar SVG Generator =================
-    function createDefaultAvatar(num, label) {
-      const hue = (num * 43) % 360;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-        <defs>
-          <linearGradient id="g${num}" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="hsl(${hue}, 38%, 22%)" />
-            <stop offset="100%" stop-color="#090b10" />
-          </linearGradient>
-        </defs>
-        <rect width="100" height="100" fill="url(#g${num})" />
-        <circle cx="50" cy="36" r="16" fill="rgba(255,255,255,0.22)" />
-        <path d="M22,88 C22,64 78,64 78,88 Z" fill="rgba(255,255,255,0.18)" />
-        <text x="50" y="94" font-family="sans-serif" font-size="11" font-weight="bold" fill="rgba(255,255,255,0.75)" text-anchor="middle">${label}</text>
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return code;
+    }
+
+    function createDefaultAvatar(index, label) {
+      const palettes = ['#dc2626', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#4f46e5', '#ea580c', '#16a34a'];
+      const bg = palettes[(index - 1) % palettes.length];
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+        <rect width="120" height="120" rx="24" fill="${bg}"/>
+        <circle cx="60" cy="46" r="22" fill="rgba(255,255,255,0.88)"/>
+        <path d="M24 106 C24 80, 96 80, 96 106" fill="rgba(255,255,255,0.88)"/>
+        <text x="60" y="114" font-family="monospace" font-size="14" font-weight="bold" fill="#000" text-anchor="middle">${label}</text>
       </svg>`;
       return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
     }
 
-    // ================= Lobby Functions =================
-    function generateRoomCode() {
-      return Math.floor(1000 + Math.random() * 9000).toString();
+    // ================= Core Math & Rules Evaluation Engine =================
+    function computeRoundOutcome(playersList, maxPlayersMode) {
+      const alivePlayers = playersList.filter(p => !p.eliminated);
+      const aliveCount = alivePlayers.length;
+      const cfg = MODE_CONFIGS[maxPlayersMode] || MODE_CONFIGS[8];
+
+      const duplicateRuleActive = aliveCount <= cfg.duplicateThreshold;
+      const precisionRuleActive = aliveCount <= cfg.precisionThreshold;
+
+      // 統計每個數字出現次數
+      const freqMap = {};
+      alivePlayers.forEach(p => {
+        if (p.choice !== null && p.choice !== undefined) {
+          freqMap[p.choice] = (freqMap[p.choice] || 0) + 1;
+        }
+      });
+
+      const invalidNumbers = [];
+      if (duplicateRuleActive) {
+        Object.keys(freqMap).forEach(numStr => {
+          if (freqMap[numStr] >= 2) {
+            invalidNumbers.push(Number(numStr));
+          }
+        });
+      }
+
+      // 篩選有效出牌玩家
+      const validPlayers = alivePlayers.filter(p => p.choice !== null && !invalidNumbers.includes(p.choice));
+
+      // 若全部人皆因「同數無效」作廢
+      if (validPlayers.length === 0) {
+        return {
+          avg: 0,
+          answer: 0,
+          winnerIds: [],
+          invalidNumbers,
+          penalty: 1,
+          notice: '⚠️ 全員選擇相同數字全數無效！本回合無人勝出，全員扣 1 分！'
+        };
+      }
+
+      const sum = validPlayers.reduce((acc, p) => acc + Number(p.choice), 0);
+      const avg = sum / validPlayers.length;
+      const answer = Number((avg * 0.8).toFixed(2));
+
+      // 找出距離 answer 最近的玩家
+      let minDiff = Infinity;
+      validPlayers.forEach(p => {
+        const diff = Math.abs(Number(p.choice) - answer);
+        if (diff < minDiff - 0.0001) {
+          minDiff = diff;
+        }
+      });
+
+      const winnerIds = validPlayers
+        .filter(p => Math.abs(Math.abs(Number(p.choice) - answer) - minDiff) <= 0.0001)
+        .map(p => p.id);
+
+      // 精準重擊判定：存活人數達標且勝出者與目標值誤差 <= 1.0
+      let penalty = 1;
+      let precisionTriggered = false;
+      if (precisionRuleActive && minDiff <= 1.0) {
+        penalty = 2;
+        precisionTriggered = true;
+      }
+
+      const winnerNames = alivePlayers.filter(p => winnerIds.includes(p.id)).map(p => p.name).join('、');
+      let notice = `🏆 勝出者：${winnerNames}（誤差 ${minDiff.toFixed(2)}）`;
+      if (invalidNumbers.length > 0) {
+        notice += ` ｜ 🚫 無效重複數字：[${invalidNumbers.join(', ')}]`;
+      }
+      if (precisionTriggered) {
+        notice += ` ｜ ⚡ 觸發精準重擊！落敗者扣 2 分！`;
+      }
+
+      return {
+        avg: Number(avg.toFixed(2)),
+        answer,
+        winnerIds,
+        invalidNumbers,
+        penalty,
+        notice
+      };
     }
 
+    // ================= Lobby UI & Room Handlers =================
     function showJoinRoomForm() {
       document.getElementById('lobby-step-select').classList.add('hidden');
       document.getElementById('lobby-step-join').classList.remove('hidden');
-      document.getElementById('join-room-code-input').value = '';
       document.getElementById('join-room-code-input').focus();
     }
 
@@ -744,26 +1012,33 @@
 
     function selectRoomMode(count) {
       lobbyState.maxPlayers = count;
-      document.querySelectorAll('.mode-btn').forEach(btn => {
-        const m = parseInt(btn.getAttribute('data-mode'), 10);
+      document.querySelectorAll('.mode-option-btn').forEach(btn => {
+        const m = Number(btn.getAttribute('data-mode'));
         if (m === count) {
-          btn.className = 'mode-btn py-3 rounded-xl border-2 border-red-500 bg-red-950/60 font-black text-sm text-white';
+          btn.className = 'mode-option-btn py-3 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-amber-300 font-black text-sm transition';
         } else {
-          btn.className = 'mode-btn py-3 rounded-xl border border-zinc-700 bg-zinc-950 font-black text-sm text-zinc-300';
+          btn.className = 'mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition';
         }
       });
+
       const cfg = MODE_CONFIGS[count] || MODE_CONFIGS[8];
-      document.getElementById('preview-dup-rule').innerHTML = `• 同數無效：剩餘 <strong>${cfg.dupThreshold} 人</strong> 或以下解鎖`;
-      document.getElementById('preview-prec-rule').innerHTML = `• 精準重擊：剩餘 <strong>${cfg.precThreshold} 人</strong> 或以下解鎖`;
+      const preview = document.getElementById('create-mode-rules-preview');
+      if (preview) {
+        preview.innerHTML = `
+          <div class="font-bold text-amber-400">📋 ${count} 人局平衡規則門檻：</div>
+          <div>• 基礎規則：全場平均數 × 0.8，最接近者勝出（其餘扣 1 分）</div>
+          <div>• 【同數無效】解鎖條件：存活人數 ≤ <span class="text-white font-bold">${cfg.duplicateThreshold} 人</span></div>
+          <div>• 【精準重擊】解鎖條件：存活人數 ≤ <span class="text-red-400 font-bold">${cfg.precisionThreshold} 人</span>（誤差 ≤ 1 使對手扣 2 分）</div>
+        `;
+      }
     }
 
-    function confirmCreateRoom() {
+    async function confirmCreateRoom() {
       const pName = document.getElementById('lobby-player-name').value.trim() || '主持人';
       const code = generateRoomCode();
       lobbyState.roomCode = code;
       lobbyState.isHost = true;
       lobbyState.hostName = pName;
-      // 主持創建房間時，主持人本身不列入參加者名單
       lobbyState.joinedPlayers = [];
 
       createdRoomsRegistry[code] = {
@@ -777,47 +1052,114 @@
         sessionStorage.setItem('king_of_diamonds_rooms', JSON.stringify(stored));
       } catch (e) {}
 
+      if (isCloudReady && db && currentUser) {
+        try {
+          await setDoc(getRoomDocRef(code), {
+            roomCode: code,
+            maxPlayers: lobbyState.maxPlayers,
+            hostUid: myPlayerUid,
+            hostName: pName,
+            status: 'waiting',
+            lobbyPlayers: [],
+            gameState: null,
+            createdAt: Date.now()
+          });
+          subscribeToRoom(code);
+        } catch (err) {
+          console.error('Create cloud room failed:', err);
+        }
+      }
+
       document.getElementById('lobby-step-create').classList.add('hidden');
       document.getElementById('lobby-step-waiting').classList.remove('hidden');
       renderWaitingRoom();
-      showToast(`已創建 ${lobbyState.maxPlayers} 人房間！代碼：${code}（主持不佔參賽名額）`, 'success');
+      showToast(`已創建 ${lobbyState.maxPlayers} 人房間！代碼：${code}`, 'success');
     }
 
-    function confirmJoinRoom() {
+    async function confirmJoinRoom() {
       const codeInput = document.getElementById('join-room-code-input').value.trim().toUpperCase();
       if (codeInput.length !== 4) {
         showToast('請輸入完整的 4 位數房間代碼！', 'error');
         return;
       }
 
-      let validRoom = createdRoomsRegistry[codeInput];
-      if (!validRoom) {
+      const pName = document.getElementById('lobby-player-name').value.trim() || '參賽者';
+      let validRoom = null;
+
+      if (isCloudReady && db && currentUser) {
         try {
-          const stored = JSON.parse(sessionStorage.getItem('king_of_diamonds_rooms') || '{}');
-          validRoom = stored[codeInput];
-        } catch (e) {}
+          const roomRef = getRoomDocRef(codeInput);
+          const snap = await getDoc(roomRef);
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data.status === 'closed') {
+              showToast(`房間 [${codeInput}] 已經關閉！`, 'error');
+              return;
+            }
+            validRoom = data;
+
+            const currentList = Array.isArray(data.lobbyPlayers) ? [...data.lobbyPlayers] : [];
+            const existingIdx = currentList.findIndex(p => p.uid === myPlayerUid);
+
+            if (existingIdx === -1) {
+              if (currentList.length >= (data.maxPlayers || 8)) {
+                showToast(`房間 [${codeInput}] 人數已滿！`, 'error');
+                return;
+              }
+              currentList.push({ uid: myPlayerUid, name: pName, isAi: false, isHost: false });
+            } else {
+              currentList[existingIdx].name = pName;
+            }
+
+            await updateDoc(roomRef, { lobbyPlayers: currentList });
+            lobbyState.joinedPlayers = currentList;
+          }
+        } catch (err) {
+          console.error('Cloud room lookup error:', err);
+        }
       }
 
       if (!validRoom) {
-        showToast(`找不到房間代碼 [${codeInput}]！參加者只能加入已由主持創建的房間。`, 'error');
+        validRoom = createdRoomsRegistry[codeInput];
+        if (!validRoom) {
+          try {
+            const stored = JSON.parse(sessionStorage.getItem('king_of_diamonds_rooms') || '{}');
+            validRoom = stored[codeInput];
+          } catch (e) {}
+        }
+        if (validRoom) {
+          lobbyState.joinedPlayers = [
+            { uid: myPlayerUid, name: pName, isAi: false, isHost: false }
+          ];
+        }
+      }
+
+      if (!validRoom) {
+        showToast(`找不到房間代碼 [${codeInput}]！請確認主持已創建房間。`, 'error');
         return;
       }
 
-      const pName = document.getElementById('lobby-player-name').value.trim() || '參賽者 1';
       lobbyState.roomCode = codeInput;
       lobbyState.maxPlayers = validRoom.maxPlayers || 8;
+      lobbyState.hostName = validRoom.hostName || '主持人';
       lobbyState.isHost = false;
-      lobbyState.joinedPlayers = [
-        { name: pName, isAi: false, isHost: false }
-      ];
+
+      if (isCloudReady && db && currentUser) {
+        subscribeToRoom(codeInput);
+      }
+
+      if (validRoom.status === 'playing' && validRoom.gameState) {
+        enterPlayingViewAsParticipant(validRoom.gameState);
+        return;
+      }
 
       document.getElementById('lobby-step-join').classList.add('hidden');
       document.getElementById('lobby-step-waiting').classList.remove('hidden');
       renderWaitingRoom();
-      showToast(`已成功加入由 [${validRoom.hostName}] 創建的房間 [${codeInput}]！`, 'success');
+      showToast(`已成功加入房間 [${codeInput}]！`, 'success');
     }
 
-    function fillRemainingWithAi() {
+    async function fillRemainingWithAi() {
       const needed = lobbyState.maxPlayers - lobbyState.joinedPlayers.length;
       if (needed <= 0) {
         showToast('房間人數已滿！', 'info');
@@ -827,9 +1169,12 @@
       for (let i = 0; i < needed; i++) {
         const idx = lobbyState.joinedPlayers.length;
         const aiLabel = aiNames[idx % aiNames.length] + ` (AI)`;
-        lobbyState.joinedPlayers.push({ name: aiLabel, isAi: true, isHost: false });
+        lobbyState.joinedPlayers.push({ uid: 'ai_' + idx + '_' + Date.now(), name: aiLabel, isAi: true, isHost: false });
       }
       renderWaitingRoom();
+      if (isCloudReady && db && currentUser && lobbyState.roomCode) {
+        await updateDoc(getRoomDocRef(lobbyState.roomCode), { lobbyPlayers: lobbyState.joinedPlayers });
+      }
     }
 
     function renderWaitingRoom() {
@@ -838,17 +1183,23 @@
       document.getElementById('waiting-joined-count').textContent = lobbyState.joinedPlayers.length;
       document.getElementById('waiting-total-count').textContent = lobbyState.maxPlayers;
 
+      const aiFillBtn = document.getElementById('btn-fill-ai-lobby');
+      if (aiFillBtn) {
+        aiFillBtn.style.display = lobbyState.isHost ? 'inline-block' : 'none';
+      }
+
       const rosterGrid = document.getElementById('lobby-roster-grid');
       const cards = [];
       for (let i = 0; i < lobbyState.maxPlayers; i++) {
         const p = lobbyState.joinedPlayers[i];
         if (p) {
+          const isMe = p.uid === myPlayerUid;
           cards.push(`
-            <div class="p-2.5 rounded-xl bg-zinc-950 border ${p.isAi ? 'border-zinc-700' : 'border-emerald-600/70'} flex flex-col items-center text-center">
+            <div class="p-2.5 rounded-xl bg-zinc-950 border ${isMe ? 'border-amber-400' : p.isAi ? 'border-zinc-700' : 'border-emerald-600/70'} flex flex-col items-center text-center">
               <span class="text-[10px] font-number text-zinc-500">#${i + 1}</span>
-              <span class="text-xs font-bold text-white truncate w-full mt-0.5">${p.name}</span>
+              <span class="text-xs font-bold text-white truncate w-full mt-0.5">${p.name} ${isMe ? '(你)' : ''}</span>
               <span class="text-[10px] mt-1 px-1.5 py-0.5 rounded ${p.isAi ? 'bg-zinc-800 text-zinc-400' : 'bg-emerald-950 text-emerald-400'}">
-                ${p.isAi ? 'AI 模擬' : '真人玩家'}
+                ${p.isAi ? 'AI 模擬' : '真人連線'}
               </span>
             </div>
           `);
@@ -869,30 +1220,69 @@
         startBtn.disabled = !isFull;
         startBtn.textContent = isFull ? '🚀 人數已齊，正式開始遊戲！' : `⏳ 等待齊人中 (${lobbyState.joinedPlayers.length}/${lobbyState.maxPlayers})...`;
       } else {
-        startBtn.disabled = false;
-        startBtn.textContent = '🎮 進入參加者操作介面';
+        startBtn.disabled = true;
+        startBtn.textContent = `⏳ 等待主持人 [${lobbyState.hostName}] 開始遊戲 (${lobbyState.joinedPlayers.length}/${lobbyState.maxPlayers})...`;
       }
     }
 
-    function leaveLobbyRoom() {
+    async function leaveLobbyRoom() {
+      if (isCloudReady && db && currentUser && lobbyState.roomCode) {
+        try {
+          if (lobbyState.isHost) {
+            await updateDoc(getRoomDocRef(lobbyState.roomCode), { status: 'closed' });
+          } else {
+            const filtered = lobbyState.joinedPlayers.filter(p => p.uid !== myPlayerUid);
+            await updateDoc(getRoomDocRef(lobbyState.roomCode), { lobbyPlayers: filtered });
+          }
+        } catch (e) {}
+      }
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
       lobbyState.joinedPlayers = [];
       lobbyState.roomCode = '';
       backToLobbySelect();
     }
 
-    function startGameFromLobby() {
+    function enterPlayingViewAsParticipant(remoteGameState) {
+      historyStack = [];
+      selectedNumber = null;
+      gameState = {
+        ...gameState,
+        ...remoteGameState
+      };
+
+      document.getElementById('header-mode-count').textContent = gameState.maxPlayers;
+      document.getElementById('header-room-code').textContent = gameState.roomCode;
+
+      authPasscodeVerified = false;
+      document.getElementById('nav-btn-player').style.display = 'inline-block';
+      document.getElementById('nav-btn-projector').style.display = 'none';
+      document.getElementById('nav-btn-host').style.display = 'none';
+      document.getElementById('nav-btn-ai').style.display = 'none';
+
+      const myObj = getMyPlayerObject();
+      if (myObj) {
+        document.getElementById('player-name-input').value = myObj.name;
+      }
+
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('game-main-header').classList.remove('hidden');
+      switchMainView('player');
+      showToast(`遊戲開始！已進入房間 [${gameState.roomCode}]`, 'success');
+    }
+
+    async function startGameFromLobby() {
       if (lobbyState.isHost && lobbyState.joinedPlayers.length < lobbyState.maxPlayers) {
         showToast('人數尚未齊全！', 'error');
         return;
       }
 
-      if (!lobbyState.isHost && lobbyState.joinedPlayers.length < lobbyState.maxPlayers) {
-        fillRemainingWithAi();
-      }
-
       historyStack = [];
       selectedNumber = null;
       gameState.roomCode = lobbyState.roomCode;
+      gameState.hostUid = myPlayerUid;
       gameState.maxPlayers = lobbyState.maxPlayers;
       gameState.round = 1;
       gameState.phase = 'voting';
@@ -903,6 +1293,7 @@
 
       gameState.players = lobbyState.joinedPlayers.map((lp, idx) => ({
         id: idx,
+        uid: lp.uid || ('p_' + idx),
         name: lp.name,
         score: 10,
         eliminated: false,
@@ -916,41 +1307,33 @@
       document.getElementById('header-mode-count').textContent = gameState.maxPlayers;
       document.getElementById('header-room-code').textContent = gameState.roomCode;
 
-      const btnPlayer = document.getElementById('nav-btn-player');
-      const btnProjector = document.getElementById('nav-btn-projector');
-      const btnHost = document.getElementById('nav-btn-host');
-      const btnAi = document.getElementById('nav-btn-ai');
-
-      if (lobbyState.isHost) {
-        authPasscodeVerified = true;
-        btnPlayer.style.display = 'none';
-        btnProjector.style.display = 'inline-block';
-        btnHost.style.display = 'inline-block';
-        btnAi.style.display = 'inline-block';
-      } else {
-        authPasscodeVerified = false;
-        btnPlayer.style.display = 'inline-block';
-        btnProjector.style.display = 'none';
-        btnHost.style.display = 'none';
-        btnAi.style.display = 'none';
-        if (gameState.players[0]) {
-          document.getElementById('player-name-input').value = gameState.players[0].name;
-        }
-      }
+      authPasscodeVerified = true;
+      document.getElementById('nav-btn-player').style.display = 'none';
+      document.getElementById('nav-btn-projector').style.display = 'inline-block';
+      document.getElementById('nav-btn-host').style.display = 'inline-block';
+      document.getElementById('nav-btn-ai').style.display = 'inline-block';
 
       document.getElementById('view-lobby').classList.add('hidden');
       document.getElementById('game-main-header').classList.remove('hidden');
 
-      if (lobbyState.isHost) {
-        switchMainView('host');
-        showToast(`主持模式已啟動！已隔離參加者介面`, 'success');
-      } else {
-        switchMainView('player');
-        showToast(`已進入房間 [${gameState.roomCode}] 參加者端！`, 'success');
-      }
+      await syncFullRoomStateToCloud();
+
+      switchMainView('host');
+      showToast(`主持模式已啟動！所有參加者手機已同步進入遊戲`, 'success');
     }
 
-    function returnToLobby() {
+    async function returnToLobby() {
+      if (isCloudReady && db && currentUser && lobbyState.roomCode) {
+        try {
+          if (lobbyState.isHost) {
+            await updateDoc(getRoomDocRef(lobbyState.roomCode), { status: 'closed' });
+          }
+        } catch (e) {}
+      }
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
       clearDisconnectState();
       document.getElementById('game-main-header').classList.add('hidden');
       ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
@@ -961,88 +1344,35 @@
       showToast('已返回遊戲大廳', 'info');
     }
 
-    // ================= Disconnect & Reconnect Handling =================
-    function formatSecondsMMSS(totalSec) {
-      const m = Math.floor(totalSec / 60);
-      const s = totalSec % 60;
-      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    function handleDisconnect() {
-      const inLobby = !document.getElementById('view-lobby').classList.contains('hidden');
-      if (inLobby || isDisconnected) return;
-
-      isDisconnected = true;
-      disconnectRemainingSeconds = 600; // 重設 10 分鐘倒數
-      const overlay = document.getElementById('disconnect-overlay');
-      const timerDisplay = document.getElementById('disconnect-countdown-display');
-      if (timerDisplay) timerDisplay.textContent = formatSecondsMMSS(disconnectRemainingSeconds);
-      if (overlay) overlay.classList.remove('hidden');
-
-      clearInterval(disconnectTimerInterval);
-      disconnectTimerInterval = setInterval(() => {
-        disconnectRemainingSeconds -= 1;
-        if (timerDisplay) {
-          timerDisplay.textContent = formatSecondsMMSS(Math.max(0, disconnectRemainingSeconds));
+    // ================= View Navigation & Passcode =================
+    function switchMainView(viewName) {
+      const views = ['player', 'projector', 'host', 'ai'];
+      views.forEach(v => {
+        const el = document.getElementById('view-' + v);
+        const btn = document.getElementById('nav-btn-' + v);
+        if (el) {
+          if (v === viewName) el.classList.remove('hidden');
+          else el.classList.add('hidden');
         }
-        if (disconnectRemainingSeconds <= 0) {
-          forceTimeoutToLobby();
+        if (btn) {
+          if (v === viewName) {
+            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-black transition';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition';
+          }
         }
-      }, 1000);
-    }
-
-    function clearDisconnectState() {
-      isDisconnected = false;
-      clearInterval(disconnectTimerInterval);
-      disconnectTimerInterval = null;
-      const overlay = document.getElementById('disconnect-overlay');
-      if (overlay) overlay.classList.add('hidden');
-    }
-
-    function manualReconnect() {
-      if (!navigator.onLine) {
-        showToast('網絡仍然離線，請檢查你的網絡連線！', 'error');
-        return;
-      }
-      clearDisconnectState();
-      showToast('✅ 已重新連線！本回合恢復進行', 'success');
+      });
       renderAllViews();
     }
 
-    function forceTimeoutToLobby() {
-      clearDisconnectState();
-      returnToLobby();
-      showToast('⏰ 斷線超過 10 分鐘，全員已自動返回大廳！', 'warning');
-    }
-
-    function simulateDisconnect() {
-      handleDisconnect();
-    }
-
-    window.addEventListener('offline', () => {
-      handleDisconnect();
-    });
-
-    window.addEventListener('online', () => {
-      if (isDisconnected) {
-        clearDisconnectState();
-        showToast('✅ 網絡已自動恢復連線，本回合繼續！', 'success');
-        renderAllViews();
-      }
-    });
-
-    // ================= View Navigation & Password Modal =================
-    function requestViewAccess(targetView) {
-      if (authPasscodeVerified) {
-        switchMainView(targetView);
+    function requestViewAccess(viewName) {
+      if (authPasscodeVerified || lobbyState.isHost) {
+        switchMainView(viewName);
         return;
       }
-      pendingTargetView = targetView;
-      const modal = document.getElementById('password-modal');
-      const input = document.getElementById('modal-password-input');
-      input.value = '';
-      modal.classList.remove('hidden');
-      setTimeout(() => input.focus(), 50);
+      pendingTargetView = viewName;
+      document.getElementById('host-password-input').value = '';
+      document.getElementById('password-modal').classList.remove('hidden');
     }
 
     function closePasswordModal() {
@@ -1051,49 +1381,119 @@
     }
 
     function verifyPassword() {
-      const val = document.getElementById('modal-password-input').value.trim();
-      if (val === SECURITY_PASSCODE) {
+      const val = document.getElementById('host-password-input').value.trim();
+      if (val === '1234') {
         authPasscodeVerified = true;
-        const target = pendingTargetView;
         closePasswordModal();
-        if (target) switchMainView(target);
+        if (pendingTargetView) switchMainView(pendingTargetView);
       } else {
         showToast('密碼錯誤！', 'error');
-        document.getElementById('modal-password-input').value = '';
       }
     }
 
-    function switchMainView(viewName) {
-      ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
-        document.getElementById(id).classList.add('hidden');
-      });
-      const targetEl = document.getElementById(`view-${viewName}`);
-      if (targetEl) targetEl.classList.remove('hidden');
+    // ================= Disconnect Pause & 10-Min Timeout =================
+    function simulateDisconnect() {
+      if (isDisconnected) return;
+      isDisconnected = true;
+      disconnectSecondsLeft = 600; // 10 minutes = 600 seconds
+      document.getElementById('disconnect-overlay').classList.remove('hidden');
+      updateDisconnectTimerDisplay();
 
-      ['player', 'projector', 'host', 'ai'].forEach(name => {
-        const btn = document.getElementById(`nav-btn-${name}`);
-        if (!btn) return;
-        if (name === viewName) {
-          btn.classList.add('ring-2', 'ring-red-500');
-        } else {
-          btn.classList.remove('ring-2', 'ring-red-500');
+      disconnectInterval = setInterval(() => {
+        disconnectSecondsLeft -= 1;
+        updateDisconnectTimerDisplay();
+        if (disconnectSecondsLeft <= 0) {
+          forceTimeoutToLobby();
         }
-      });
+      }, 1000);
+    }
 
+    function updateDisconnectTimerDisplay() {
+      const mins = Math.floor(disconnectSecondsLeft / 60);
+      const secs = disconnectSecondsLeft % 60;
+      const el = document.getElementById('disconnect-countdown');
+      if (el) {
+        el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+    }
+
+    function clearDisconnectState() {
+      isDisconnected = false;
+      if (disconnectInterval) {
+        clearInterval(disconnectInterval);
+        disconnectInterval = null;
+      }
+      const overlay = document.getElementById('disconnect-overlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    function manualReconnect() {
+      clearDisconnectState();
+      showToast('✅ 已重新連線，繼續當前回合！', 'success');
       renderAllViews();
     }
+
+    async function forceTimeoutToLobby() {
+      clearDisconnectState();
+      showToast('⏱️ 斷線超過 10 分鐘，全員自動返回大廳！', 'warning');
+      await returnToLobby();
+    }
+
+    window.addEventListener('offline', () => {
+      if (!document.getElementById('game-main-header').classList.contains('hidden')) {
+        simulateDisconnect();
+      }
+    });
+
+    window.addEventListener('online', () => {
+      if (isDisconnected) {
+        manualReconnect();
+      }
+    });
 
     // ================= Player Actions =================
-    function updatePlayerName(newName) {
-      const me = gameState.players[0];
-      if (!me) return;
-      me.name = newName.trim() || '參賽者 1';
-      renderAllViews();
+    function getMyPlayerObject() {
+      if (!gameState.players || gameState.players.length === 0) return null;
+      const found = gameState.players.find(p => p.uid === myPlayerUid);
+      return found || gameState.players[0];
     }
 
+    async function updatePlayerName(newName) {
+      const me = getMyPlayerObject();
+      if (!me) return;
+      me.name = newName.trim() || '參賽者';
+      renderAllViews();
+      await syncPlayerChoiceToCloud(me);
+    }
+
+    async function syncPlayerChoiceToCloud(playerObj) {
+      if (!isCloudReady || !db || !currentUser || !gameState.roomCode) return;
+      try {
+        const roomRef = getRoomDocRef(gameState.roomCode);
+        const snap = await getDoc(roomRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.gameState && Array.isArray(data.gameState.players)) {
+            const updatedPlayers = data.gameState.players.map(p =>
+              p.id === playerObj.id
+                ? { ...p, name: playerObj.name, choice: playerObj.choice, locked: playerObj.locked, isLockedByPlayer: playerObj.isLockedByPlayer }
+                : p
+            );
+            await updateDoc(roomRef, {
+              'gameState.players': updatedPlayers,
+              updatedAt: Date.now()
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Sync player choice error:', e);
+      }
+    }
+
+    // 參加者點擊數字：無任何音效，僅選取預覽
     function selectNumber(num) {
       if (isDisconnected) return;
-      const me = gameState.players[0];
+      const me = getMyPlayerObject();
       if (!me || me.eliminated) return;
       if (gameState.phase !== 'voting' || me.isLockedByPlayer) return;
 
@@ -1102,12 +1502,12 @@
       renderAllViews();
     }
 
-    function lockPlayerAnswer() {
+    async function lockPlayerAnswer() {
       if (isDisconnected) {
         showToast('連線中斷暫停中，請等待重新連線！', 'warning');
         return;
       }
-      const me = gameState.players[0];
+      const me = getMyPlayerObject();
       if (!me || me.eliminated) return;
       if (gameState.phase !== 'voting') {
         showToast('目前非選號階段，無法鎖定！', 'warning');
@@ -1122,19 +1522,18 @@
       me.locked = true;
       me.isLockedByPlayer = true;
 
-      playProjectorLockSound();
-      showToast(`已鎖定數字 [${me.choice}]！`, 'success');
-
-      // 若為參加者單機模式，自動觸發 AI 思考鎖定方便測試
-      if (!lobbyState.isHost) {
-        triggerAllAiThinkAndLock(true);
+      // 若是單機同頁面測試且當前在投影畫面則播放鎖定音效
+      if (lobbyState.isHost) {
+        playProjectorLockSound();
       }
-
+      showToast(`已鎖定數字 [${me.choice}]！`, 'success');
       renderAllViews();
+
+      await syncPlayerChoiceToCloud(me);
     }
 
     // ================= AI Engine =================
-    function triggerAllAiThinkAndLock(silent = false) {
+    async function triggerAllAiThinkAndLock(silent = false) {
       if (isDisconnected || gameState.phase !== 'voting') return;
       let lockedCount = 0;
       gameState.players.forEach(p => {
@@ -1156,17 +1555,18 @@
       if (lockedCount > 0) {
         playProjectorLockSound();
         if (!silent) showToast(`已讓 ${lockedCount} 位 AI 完成出牌鎖定！`, 'info');
+        await syncFullRoomStateToCloud();
       }
       renderAllViews();
     }
 
-    function runAiCompleteRound() {
+    async function runAiCompleteRound() {
       if (isDisconnected) {
         showToast('連線中斷暫停中！', 'warning');
         return;
       }
       if (gameState.phase === 'revealed') {
-        startNextRound();
+        await startNextRound();
       }
       gameState.players.forEach(p => {
         if (!p.eliminated && !p.locked) {
@@ -1176,83 +1576,11 @@
         }
       });
       renderAllViews();
-      revealAndCalculateRound();
+      await revealAndCalculateRound();
     }
 
-    // ================= Core Calculation & Round Flow =================
-    function computeRoundOutcome(playersSnapshot, maxPlayers) {
-      const alivePlayers = playersSnapshot.filter(p => !p.eliminated);
-      const aliveCount = alivePlayers.length;
-      const cfg = MODE_CONFIGS[maxPlayers] || MODE_CONFIGS[8];
-
-      const dupRuleActive = aliveCount <= cfg.dupThreshold;
-      const precRuleActive = aliveCount <= cfg.precThreshold;
-
-      const freqMap = {};
-      alivePlayers.forEach(p => {
-        if (p.choice !== null) {
-          freqMap[p.choice] = (freqMap[p.choice] || 0) + 1;
-        }
-      });
-
-      const invalidNumbers = [];
-      if (dupRuleActive) {
-        Object.keys(freqMap).forEach(numStr => {
-          if (freqMap[numStr] >= 2) {
-            invalidNumbers.push(parseInt(numStr, 10));
-          }
-        });
-      }
-
-      const validPlayers = alivePlayers.filter(p => p.choice !== null && !invalidNumbers.includes(p.choice));
-
-      if (validPlayers.length === 0) {
-        return {
-          answer: 0,
-          winnerIds: [],
-          invalidNumbers,
-          penalty: 1,
-          notice: '【同數無效】所有存活玩家數字皆重複作廢！全員扣 1 分！'
-        };
-      }
-
-      const sum = validPlayers.reduce((acc, p) => acc + p.choice, 0);
-      const avg = sum / validPlayers.length;
-      const target = Number((avg * 0.8).toFixed(2));
-
-      let minDiff = Infinity;
-      validPlayers.forEach(p => {
-        const diff = Math.abs(p.choice - target);
-        if (diff < minDiff) minDiff = diff;
-      });
-
-      const winners = validPlayers.filter(p => Math.abs(Math.abs(p.choice - target) - minDiff) < 0.0001);
-      const winnerIds = winners.map(w => w.id);
-
-      let penalty = 1;
-      let noticeParts = [];
-      if (invalidNumbers.length > 0) {
-        noticeParts.push(`作廢數字: [${invalidNumbers.join(', ')}]`);
-      }
-
-      if (precRuleActive && minDiff <= 0.5) {
-        penalty = 2;
-        noticeParts.push(`⚡ 觸發【精準重擊】誤差 ≤ 0.5，落敗者雙倍扣 2 分！`);
-      }
-
-      const winnerNames = winners.map(w => w.name).join('、');
-      noticeParts.unshift(`目標值 ${target.toFixed(2)} ｜ 勝出者：${winnerNames}`);
-
-      return {
-        answer: target,
-        winnerIds,
-        invalidNumbers,
-        penalty,
-        notice: noticeParts.join(' ｜ ')
-      };
-    }
-
-    function revealAndCalculateRound() {
+    // ================= Host Round Controls =================
+    async function revealAndCalculateRound() {
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法開牌結算！', 'warning');
         return;
@@ -1294,9 +1622,10 @@
       playRevealSound();
       showToast('⚡ 已開牌並完成本回合結算！', 'success');
       renderAllViews();
+      await syncFullRoomStateToCloud();
     }
 
-    function startNextRound() {
+    async function startNextRound() {
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法進入下一回合！', 'warning');
         return;
@@ -1323,9 +1652,10 @@
 
       showToast(`進入第 ${gameState.round} 回合！所有存活玩家請重新選號`, 'info');
       renderAllViews();
+      await syncFullRoomStateToCloud();
     }
 
-    function returnToPreviousRound() {
+    async function returnToPreviousRound() {
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法操作！', 'warning');
         return;
@@ -1353,9 +1683,10 @@
 
       showToast(`↩️ 已返回第 ${gameState.round} 回合！所有玩家分數與淘汰狀態已還原，並解除鎖定`, 'warning');
       renderAllViews();
+      await syncFullRoomStateToCloud();
     }
 
-    function resetEntireGame() {
+    async function resetEntireGame() {
       historyStack = [];
       selectedNumber = null;
       gameState.round = 1;
@@ -1375,6 +1706,7 @@
 
       showToast('⚠️ 已重置本局所有玩家分數為 10 分！', 'info');
       renderAllViews();
+      await syncFullRoomStateToCloud();
     }
 
     // ================= Render Views =================
@@ -1386,221 +1718,331 @@
     }
 
     function renderPlayerView() {
-      const me = gameState.players[0];
+      const me = getMyPlayerObject();
       if (!me) return;
 
       const aliveCount = gameState.players.filter(p => !p.eliminated).length;
       const cfg = MODE_CONFIGS[gameState.maxPlayers] || MODE_CONFIGS[8];
 
-      document.getElementById('player-score-label').textContent = me.score;
-      document.getElementById('player-mode-title').textContent = gameState.maxPlayers;
-      document.getElementById('player-alive-indicator').textContent = aliveCount;
+      const badgeP = document.querySelector('#view-player .font-number.font-bold.text-white.text-xs');
+      if (badgeP) badgeP.textContent = `P${me.id + 1}`;
 
-      const displayVal = me.choice !== null ? me.choice : (selectedNumber !== null ? selectedNumber : '--');
-      document.getElementById('player-selected-display').textContent = displayVal;
+      document.getElementById('player-round-num').textContent = gameState.round;
+      const scoreEl = document.getElementById('player-score-display');
+      scoreEl.textContent = me.score;
+      scoreEl.className = `font-number font-black text-2xl ${me.score >= 7 ? 'text-emerald-400' : me.score >= 4 ? 'text-amber-400' : 'text-red-500'}`;
 
+      // Active Rules Badges
+      const dupBadge = document.getElementById('player-rule-dup-badge');
+      const precBadge = document.getElementById('player-rule-prec-badge');
+      if (aliveCount <= cfg.duplicateThreshold) dupBadge.classList.remove('hidden');
+      else dupBadge.classList.add('hidden');
+
+      if (aliveCount <= cfg.precisionThreshold) precBadge.classList.remove('hidden');
+      else precBadge.classList.add('hidden');
+
+      // Eliminated Check
       const elimBanner = document.getElementById('player-eliminated-banner');
+      const padWrapper = document.getElementById('player-numberpad-wrapper');
+      const lockBtn = document.getElementById('btn-player-lock');
+
       if (me.eliminated) {
         elimBanner.classList.remove('hidden');
+        padWrapper.classList.add('hidden');
+        lockBtn.classList.add('hidden');
+        return;
       } else {
         elimBanner.classList.add('hidden');
+        padWrapper.classList.remove('hidden');
+        lockBtn.classList.remove('hidden');
       }
 
-      const isLocked = me.eliminated || gameState.phase !== 'voting' || me.isLockedByPlayer;
-      const submitBtn = document.getElementById('btn-submit-number');
-      submitBtn.disabled = isLocked || (me.choice === null && selectedNumber === null);
-      submitBtn.textContent = me.isLockedByPlayer ? '已鎖定' : '鎖定答案';
-
-      const statusLabel = document.getElementById('player-lock-status');
-      if (me.eliminated) {
-        statusLabel.textContent = '已淘汰';
-        statusLabel.className = 'text-red-500 font-bold';
-      } else if (me.isLockedByPlayer) {
-        statusLabel.textContent = `已鎖定 [${me.choice}]，等待開牌`;
-        statusLabel.className = 'text-emerald-400 font-bold';
-      } else if (me.choice !== null) {
-        statusLabel.textContent = `已暫選 [${me.choice}]，請按鎖定`;
-        statusLabel.className = 'text-amber-400 font-bold';
+      // Revealed Result Banner
+      const revBanner = document.getElementById('player-revealed-banner');
+      if (gameState.phase === 'revealed') {
+        revBanner.classList.remove('hidden');
+        document.getElementById('player-revealed-answer').textContent = gameState.answer !== null ? gameState.answer.toFixed(2) : '--';
+        const isWin = gameState.winnerIds.includes(me.id);
+        document.getElementById('player-revealed-outcome').innerHTML = isWin
+          ? `<span class="text-emerald-400">🎉 你在本回合勝出！分數維持 ${me.score} 分</span>`
+          : `<span class="text-red-400">💥 本回合落敗！目前剩餘 ${me.score} 分</span>`;
       } else {
-        statusLabel.textContent = '請選擇數字';
-        statusLabel.className = 'text-amber-400 font-medium';
+        revBanner.classList.add('hidden');
       }
 
-      // Render 1-100 Number Pad
-      const padGrid = document.getElementById('number-pad-grid');
-      const currentPick = me.choice !== null ? me.choice : selectedNumber;
-      let padHtml = '';
+      // Current choice preview
+      const currentPick = me.isLockedByPlayer ? me.choice : (selectedNumber !== null ? selectedNumber : me.choice);
+      document.getElementById('player-selected-preview').textContent = currentPick !== null ? currentPick : '--';
+
+      // Render 1 - 100 Number Grid
+      const grid = document.getElementById('player-number-grid');
+      const isDisabled = gameState.phase !== 'voting' || me.isLockedByPlayer || isDisconnected;
+
+      const btnsHtml = [];
       for (let i = 1; i <= 100; i++) {
-        const isSelected = currentPick === i;
-        let btnClass = 'py-2 rounded font-number text-xs font-bold transition-all border ';
-        if (isSelected) {
-          btnClass += 'bg-red-600 border-red-400 text-white shadow-md scale-105';
-        } else if (isLocked) {
-          btnClass += 'bg-zinc-900/50 border-zinc-800/60 text-zinc-600 cursor-not-allowed';
-        } else {
-          btnClass += 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-200 cursor-pointer';
+        let extraClass = 'bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:border-amber-500/70';
+        if (currentPick === i) {
+          extraClass = me.isLockedByPlayer ? 'locked-choice' : 'selected';
         }
-        padHtml += `<button type="button" ${isLocked ? 'disabled' : ''} onclick="selectNumber(${i})" class="${btnClass}">${i}</button>`;
+        btnsHtml.push(`
+          <button type="button" onclick="selectNumber(${i})" ${isDisabled ? 'disabled' : ''}
+            class="num-btn py-2 sm:py-2.5 rounded-lg border font-number text-xs sm:text-sm ${extraClass} ${isDisabled && currentPick !== i ? 'opacity-40 cursor-not-allowed' : ''}">
+            ${i}
+          </button>
+        `);
       }
-      padGrid.innerHTML = padHtml;
+      grid.innerHTML = btnsHtml.join('');
 
-      // Update Dynamic Rule Badges
-      const dupUnlocked = aliveCount <= cfg.dupThreshold;
-      const precUnlocked = aliveCount <= cfg.precThreshold;
-
-      const cardDup = document.getElementById('rule-card-dup');
-      const badgeDup = document.getElementById('rule-badge-dup');
-      cardDup.className = `p-2 rounded-lg border ${dupUnlocked ? 'rule-unlocked text-zinc-100' : 'border-zinc-800 bg-black/50 text-zinc-500'}`;
-      badgeDup.textContent = dupUnlocked ? '生效中' : `剩餘 ${cfg.dupThreshold} 人解鎖`;
-      badgeDup.className = `text-[10px] px-1.5 py-0.5 rounded border ${dupUnlocked ? 'bg-red-950 text-red-400 border-red-800' : 'bg-zinc-900 text-zinc-500 border-zinc-800'}`;
-
-      const cardPrec = document.getElementById('rule-card-prec');
-      const badgePrec = document.getElementById('rule-badge-prec');
-      cardPrec.className = `p-2 rounded-lg border ${precUnlocked ? 'rule-unlocked text-zinc-100' : 'border-zinc-800 bg-black/50 text-zinc-500'}`;
-      badgePrec.textContent = precUnlocked ? '生效中' : `剩餘 ${cfg.precThreshold} 人解鎖`;
-      badgePrec.className = `text-[10px] px-1.5 py-0.5 rounded border ${precUnlocked ? 'bg-red-950 text-red-400 border-red-800' : 'bg-zinc-900 text-zinc-500 border-zinc-800'}`;
+      // Lock Button State
+      if (gameState.phase === 'revealed') {
+        lockBtn.disabled = true;
+        lockBtn.textContent = '⏳ 本回合已結算，等待下一回合...';
+      } else if (me.isLockedByPlayer) {
+        lockBtn.disabled = true;
+        lockBtn.textContent = `✅ 已鎖定數字 [${me.choice}] · 等待開牌`;
+      } else {
+        lockBtn.disabled = currentPick === null;
+        lockBtn.textContent = currentPick !== null ? `🔒 確認鎖定數字 [${currentPick}]` : '🔒 請先點選上方數字';
+      }
     }
 
     function renderProjectorView() {
-      const total = gameState.players.length || gameState.maxPlayers;
-      const aliveCount = gameState.players.filter(p => !p.eliminated).length;
+      const alivePlayers = gameState.players.filter(p => !p.eliminated);
+      const aliveCount = alivePlayers.length;
+      const cfg = MODE_CONFIGS[gameState.maxPlayers] || MODE_CONFIGS[8];
 
       document.getElementById('proj-round-num').textContent = gameState.round;
-      document.getElementById('proj-alive-count').textContent = aliveCount;
-      document.getElementById('proj-total-count').textContent = total;
-      document.getElementById('proj-phase-badge').textContent = gameState.phase === 'revealed' ? '已開牌結算' : '選號中 (絕對保密)';
-      document.getElementById('proj-answer-value').textContent = gameState.phase === 'revealed' && gameState.answer !== null ? gameState.answer.toFixed(2) : '--.--';
-      document.getElementById('proj-notice-text').textContent = gameState.roundNotice || '';
+      const phaseBadge = document.getElementById('proj-phase-badge');
+      if (gameState.phase === 'revealed') {
+        phaseBadge.textContent = '⚡ 本回合已開牌結算！';
+        phaseBadge.className = 'px-4 py-1.5 rounded-xl bg-red-600/30 border border-red-500 text-red-300 font-black text-sm sm:text-base';
+      } else {
+        const lockedCnt = alivePlayers.filter(p => p.locked).length;
+        phaseBadge.textContent = `⏳ 選號鎖定進度：${lockedCnt} / ${aliveCount}`;
+        phaseBadge.className = 'px-4 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-sm sm:text-base animate-pulse';
+      }
 
-      const pGrid = document.getElementById('proj-players-grid');
-      const nGrid = document.getElementById('proj-numbers-grid');
-      pGrid.style.gridTemplateColumns = `repeat(${total}, minmax(0, 1fr))`;
-      nGrid.style.gridTemplateColumns = `repeat(${total}, minmax(0, 1fr))`;
+      // Rules badges
+      const dupEl = document.getElementById('proj-rule-dup');
+      const precEl = document.getElementById('proj-rule-prec');
+      dupEl.textContent = `🚫 同數無效 (≤${cfg.duplicateThreshold}人)`;
+      precEl.textContent = `⚡ 精準重擊 (≤${cfg.precisionThreshold}人)`;
 
-      let playersHtml = '';
-      let numbersHtml = '';
+      dupEl.className = aliveCount <= cfg.duplicateThreshold
+        ? 'px-3 py-1 rounded-lg bg-purple-950/90 border border-purple-500 text-purple-200 font-black shadow-[0_0_12px_rgba(168,85,247,0.4)]'
+        : 'px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold';
 
-      gameState.players.forEach(p => {
+      precEl.className = aliveCount <= cfg.precisionThreshold
+        ? 'px-3 py-1 rounded-lg bg-red-950/90 border border-red-500 text-red-200 font-black shadow-[0_0_12px_rgba(239,68,68,0.4)]'
+        : 'px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold';
+
+      // Target & Average numbers
+      if (gameState.phase === 'revealed' && gameState.answer !== null) {
+        const outcome = computeRoundOutcome(gameState.players, gameState.maxPlayers);
+        document.getElementById('proj-avg-display').textContent = outcome.avg.toFixed(2);
+        document.getElementById('proj-target-display').textContent = gameState.answer.toFixed(2);
+        document.getElementById('proj-notice-display').textContent = gameState.roundNotice || '結算完成';
+      } else {
+        document.getElementById('proj-avg-display').textContent = '--.--';
+        document.getElementById('proj-target-display').textContent = '??.??';
+        document.getElementById('proj-notice-display').textContent = '等待所有存活參賽者完成鎖定';
+      }
+
+      // Dynamic Grid Columns based on player count (5..10)
+      const grid = document.getElementById('proj-players-grid');
+      const colsClass = {
+        5: 'grid-cols-2 sm:grid-cols-5',
+        6: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
+        7: 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-7',
+        8: 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8',
+        9: 'grid-cols-3 sm:grid-cols-5 lg:grid-cols-9',
+        10: 'grid-cols-2 sm:grid-cols-5 lg:grid-cols-10'
+      }[gameState.maxPlayers] || 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8';
+      grid.className = `grid ${colsClass} gap-3 sm:gap-4 my-auto`;
+
+      grid.innerHTML = gameState.players.map(p => {
         const isWinner = gameState.phase === 'revealed' && gameState.winnerIds.includes(p.id);
-        let scoreColor = 'text-emerald-400';
-        if (p.score <= 3) scoreColor = 'text-red-500';
-        else if (p.score <= 6) scoreColor = 'text-amber-400';
-
-        playersHtml += `
-          <div class="flex flex-col items-center gap-1.5 ${p.eliminated ? 'eliminated-card' : ''}">
-            <div class="font-number text-3xl sm:text-4xl font-black leading-none ${p.eliminated ? 'text-zinc-600' : scoreColor} drop-shadow">
-              ${p.eliminated ? 'OUT' : p.score}
-            </div>
-            <div class="relative w-full max-w-[115px] aspect-square bg-zinc-900 border border-zinc-700 overflow-hidden ${isWinner ? 'winner-frame' : ''}">
-              <img src="${p.avatar}" alt="${p.name}" class="w-full h-full object-cover" />
-              <div class="absolute bottom-1 right-1 corner-triangle ${p.eliminated ? 'eliminated' : p.locked ? 'locked' : ''}"></div>
-              ${p.eliminated ? '<div class="absolute inset-0 bg-black/70 flex items-center justify-center font-black text-red-500 text-lg tracking-widest rotate-[-12deg]">OUT</div>' : ''}
-            </div>
-            <div class="text-xs sm:text-sm font-bold text-zinc-200 truncate max-w-full px-1 text-center">${p.name}</div>
-          </div>
-        `;
-
         const isInvalid = gameState.phase === 'revealed' && gameState.invalidNumbers.includes(p.choice);
-        let numText = '?';
-        let numStyle = 'text-zinc-600';
+
+        // Score color logic (10 down to 0)
+        const scoreColor = p.eliminated
+          ? 'text-zinc-600'
+          : p.score >= 7
+            ? 'text-emerald-400'
+            : p.score >= 4
+              ? 'text-amber-400'
+              : 'text-red-500 animate-pulse';
+
+        let numberBox = '';
         if (p.eliminated) {
-          numText = '—';
-          numStyle = 'text-zinc-700';
+          numberBox = `<div class="font-number text-2xl sm:text-3xl font-black text-red-700 tracking-widest">OUT</div>`;
         } else if (gameState.phase === 'revealed') {
-          numText = p.choice !== null ? p.choice : '--';
-          numStyle = isInvalid ? 'text-zinc-500 line-through' : isWinner ? 'text-red-500 scale-110' : 'text-white';
-        } else if (p.locked) {
-          numText = 'LOCK';
-          numStyle = 'text-emerald-400 text-lg sm:text-xl tracking-widest';
+          numberBox = `
+            <div class="font-number text-3xl sm:text-4xl font-black ${isInvalid ? 'line-through text-zinc-500' : isWinner ? 'text-amber-400' : 'text-white'}">
+              ${p.choice !== null ? p.choice : '--'}
+            </div>
+            ${isInvalid ? '<span class="text-[10px] font-bold text-purple-400">同數作廢</span>' : ''}
+          `;
+        } else {
+          numberBox = p.locked
+            ? `<div class="px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500 text-emerald-400 font-number font-black text-base sm:text-lg">LOCK</div>`
+            : `<div class="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 font-number font-bold text-xs sm:text-sm">思考中</div>`;
         }
 
-        numbersHtml += `
-          <div class="flex flex-col items-center justify-center py-2 bg-zinc-950/80 border border-zinc-800/90 rounded-lg ${p.eliminated ? 'opacity-40' : ''}">
-            <span class="font-number text-2xl sm:text-4xl font-black transition-all ${numStyle}">${numText}</span>
+        return `
+          <div class="glass-panel rounded-2xl p-3 sm:p-4 flex flex-col items-center text-center relative transition-all
+            ${p.eliminated ? 'opacity-40 grayscale border-zinc-800 bg-zinc-950' : isWinner ? 'border-2 border-amber-400 winner-glow bg-amber-950/20' : p.locked ? 'border-emerald-600/70' : 'border-zinc-800'}">
+
+            ${isWinner ? '<div class="absolute -top-3 px-2.5 py-0.5 rounded-full bg-amber-400 text-black font-black text-[10px] tracking-wider shadow">👑 WINNER</div>' : ''}
+
+            <!-- Enlarged Top Score Display -->
+            <div class="mb-2">
+              <div class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">LIFE SCORE</div>
+              <div class="font-number text-3xl sm:text-4xl font-black leading-none ${scoreColor}">
+                ${p.score}
+              </div>
+            </div>
+
+            <!-- Avatar -->
+            <img src="${p.avatar}" alt="${p.name}" class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 ${p.eliminated ? 'border-zinc-700' : isWinner ? 'border-amber-400' : 'border-zinc-700'} mb-2" />
+
+            <!-- Name -->
+            <div class="font-bold text-xs sm:text-sm text-white truncate w-full mb-2">${p.name}</div>
+
+            <!-- Choice / Status Box -->
+            <div class="w-full py-2.5 rounded-xl bg-black/60 border border-zinc-800/90 flex flex-col items-center justify-center min-h-[58px]">
+              ${numberBox}
+            </div>
           </div>
         `;
-      });
-
-      pGrid.innerHTML = playersHtml;
-      nGrid.innerHTML = numbersHtml;
+      }).join('');
     }
 
     function renderHostView() {
-      const monitorGrid = document.getElementById('host-players-monitor-grid');
-      if (!monitorGrid) return;
+      const alivePlayers = gameState.players.filter(p => !p.eliminated);
+      const aliveCount = alivePlayers.length;
+      const lockedAliveCount = alivePlayers.filter(p => p.locked).length;
+      const cfg = MODE_CONFIGS[gameState.maxPlayers] || MODE_CONFIGS[8];
 
-      monitorGrid.innerHTML = gameState.players.map(p => {
-        const isWinner = gameState.phase === 'revealed' && gameState.winnerIds.includes(p.id);
+      document.getElementById('host-round-num').textContent = gameState.round;
+      document.getElementById('host-lock-progress').textContent = `${lockedAliveCount} / ${aliveCount}`;
+      document.getElementById('host-alive-count').textContent = aliveCount;
+
+      document.getElementById('host-dup-threshold-label').textContent = `≤${cfg.duplicateThreshold}人`;
+      document.getElementById('host-prec-threshold-label').textContent = `≤${cfg.precisionThreshold}人`;
+
+      document.getElementById('host-rule-card-dup').className = aliveCount <= cfg.duplicateThreshold
+        ? 'p-3 rounded-xl bg-purple-950/30 border border-purple-500'
+        : 'p-3 rounded-xl bg-zinc-950 border border-zinc-800 opacity-60';
+
+      document.getElementById('host-rule-card-prec').className = aliveCount <= cfg.precisionThreshold
+        ? 'p-3 rounded-xl bg-red-950/30 border border-red-500'
+        : 'p-3 rounded-xl bg-zinc-950 border border-zinc-800 opacity-60';
+
+      // Render Host Monitoring Cards (Eliminated players grayed out)
+      const hostGrid = document.getElementById('host-players-grid');
+      hostGrid.innerHTML = gameState.players.map(p => {
+        const isOut = p.eliminated;
         return `
-          <div class="p-3 rounded-xl border transition-all ${p.eliminated ? 'bg-zinc-950/60 border-zinc-900 opacity-45 grayscale' : isWinner ? 'bg-red-950/30 border-red-600' : 'bg-black/70 border-zinc-800'}">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-black text-white truncate">${p.name}</span>
-              <span class="text-[11px] font-number font-bold px-2 py-0.5 rounded ${p.eliminated ? 'bg-zinc-800 text-zinc-500' : 'bg-zinc-900 text-amber-400 border border-zinc-700'}">
-                ${p.eliminated ? 'OUT (0分)' : `${p.score} 分`}
-              </span>
+          <div class="p-3 rounded-xl border flex items-center justify-between gap-2 transition
+            ${isOut ? 'bg-zinc-950/60 border-zinc-800/60 opacity-40 grayscale' : p.locked ? 'bg-zinc-900 border-emerald-600/70' : 'bg-zinc-900/70 border-zinc-800'}">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="font-number text-xs font-bold text-zinc-500">P${p.id + 1}</span>
+                <span class="font-bold text-xs sm:text-sm text-white truncate">${p.name}</span>
+              </div>
+              <div class="text-xs mt-1">
+                分數：<strong class="font-number ${isOut ? 'text-red-500' : 'text-amber-400'}">${p.score} 分</strong>
+                ${isOut ? '<span class="ml-1 px-1.5 py-0.5 rounded bg-red-950 text-red-400 text-[10px] font-bold">OUT</span>' : ''}
+              </div>
             </div>
-            <div class="flex items-center justify-between text-xs">
-              <span class="${p.eliminated ? 'text-zinc-600' : p.locked ? 'text-emerald-400 font-bold' : 'text-amber-400'}">
-                ${p.eliminated ? '已淘汰' : p.locked ? '✅ 已鎖定' : '⏳ 選號中'}
-              </span>
-              <span class="font-number text-xl font-black ${p.choice !== null ? 'text-white' : 'text-zinc-600'}">
-                ${p.eliminated ? '—' : (p.choice !== null ? p.choice : '--')}
-              </span>
+
+            <div class="text-right shrink-0">
+              <div class="font-number text-xl font-black ${isOut ? 'text-zinc-600' : p.locked ? 'text-emerald-400' : 'text-zinc-500'}">
+                ${isOut ? 'OUT' : (p.choice !== null ? p.choice : '--')}
+              </div>
+              <div class="text-[10px] ${p.locked ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">
+                ${isOut ? '已淘汰' : (p.locked ? '已鎖定' : '未鎖定')}
+              </div>
             </div>
           </div>
         `;
       }).join('');
 
-      document.getElementById('btn-reveal-round').disabled = gameState.phase === 'revealed';
-      document.getElementById('btn-next-round').disabled = gameState.phase !== 'revealed';
-      document.getElementById('btn-prev-round').disabled = historyStack.length === 0;
+      // Pre-Reveal Live Winner Preview Banner
+      const previewWinnerEl = document.getElementById('host-preview-winner-name');
+      const previewDetailEl = document.getElementById('host-preview-detail');
+      const previewTargetEl = document.getElementById('host-preview-target');
 
-      const predContainer = document.getElementById('host-prediction-container');
-      const alivePlayers = gameState.players.filter(p => !p.eliminated);
-      const allLocked = alivePlayers.length > 0 && alivePlayers.every(p => p.locked && p.choice !== null);
-
-      if (gameState.phase === 'voting' && allLocked) {
+      const allAliveLocked = aliveCount > 0 && alivePlayers.every(p => p.locked && p.choice !== null);
+      if (allAliveLocked) {
         const preview = computeRoundOutcome(gameState.players, gameState.maxPlayers);
-        const predictedWinners = gameState.players.filter(p => preview.winnerIds.includes(p.id)).map(p => `${p.name} (${p.choice})`).join('、');
-        predContainer.innerHTML = `
-          <div class="p-5 rounded-2xl bg-gradient-to-r from-amber-950/90 via-red-950/80 to-amber-950/90 border-2 border-amber-500 shadow-2xl text-center space-y-1.5 animate-pulse">
-            <div class="text-xs font-black tracking-[0.25em] text-amber-400">🔮 全員已鎖定 — 後台即時結算預測 (尚未開牌)</div>
-            <div class="text-2xl sm:text-3xl font-black text-white">
-              暫定 WINNER：<span class="text-amber-300 underline decoration-red-500">${predictedWinners || '無 (全員作廢)'}</span>
-            </div>
-            <div class="text-sm font-bold text-zinc-200">
-              目標值 (平均 × 0.8)：<span class="font-number text-xl text-emerald-400">${preview.answer.toFixed(2)}</span> ｜ 落敗扣分：<span class="text-red-400">-${preview.penalty} 分</span>
-            </div>
-          </div>
-        `;
+        const winners = alivePlayers.filter(p => preview.winnerIds.includes(p.id));
+        previewWinnerEl.innerHTML = winners.length > 0
+          ? `🏆 暫定勝出：<span class="text-amber-400">${winners.map(w => `${w.name} (${w.choice})`).join('、')}</span>`
+          : `⚠️ 暫定結果：<span class="text-red-400">全員同數無效，無人勝出</span>`;
+        previewDetailEl.textContent = preview.notice;
+        previewTargetEl.textContent = preview.answer.toFixed(2);
       } else {
-        predContainer.innerHTML = '';
+        const remaining = alivePlayers.filter(p => !p.locked).map(p => p.name).join('、');
+        previewWinnerEl.textContent = `⏳ 等待鎖定中 (${lockedAliveCount}/${aliveCount})...`;
+        previewDetailEl.textContent = remaining ? `尚未鎖定：${remaining}` : '等待參賽者加入';
+        previewTargetEl.textContent = '--.--';
       }
     }
 
     function renderAiView() {
       const list = document.getElementById('ai-status-list');
       if (!list) return;
-      const aiPlayers = gameState.players.filter(p => p.isAi);
-      if (aiPlayers.length === 0) {
-        list.innerHTML = '<div class="text-xs text-zinc-500">目前房間內沒有 AI 玩家。</div>';
+      const ais = gameState.players.filter(p => p.isAi);
+      if (ais.length === 0) {
+        list.innerHTML = `<div class="text-xs text-zinc-500 text-center py-4">本局全為真人玩家，無 AI 角色。</div>`;
         return;
       }
-      list.innerHTML = aiPlayers.map(p => `
-        <div class="flex items-center justify-between p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs">
-          <div>
-            <span class="font-bold text-white">${p.name}</span>
-            <span class="text-zinc-500 ml-2">(${p.eliminated ? 'OUT' : p.score + '分'})</span>
-          </div>
-          <div class="font-number font-bold ${p.locked ? 'text-emerald-400' : 'text-amber-400'}">
-            ${p.eliminated ? '已淘汰' : p.locked ? `已鎖定: ${p.choice}` : '思考中...'}
-          </div>
+      list.innerHTML = ais.map(ai => `
+        <div class="flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs ${ai.eliminated ? 'opacity-40 grayscale' : ''}">
+          <span class="font-bold text-white">${ai.name} (分數: ${ai.score})</span>
+          <span class="font-number text-amber-400 font-bold">
+            ${ai.eliminated ? 'OUT' : ai.locked ? `已鎖定: ${ai.choice}` : '未出牌'}
+          </span>
         </div>
       `).join('');
     }
 
+    // Expose handlers to global window for inline onclick attributes
+    Object.assign(window, {
+      manualReconnect,
+      forceTimeoutToLobby,
+      closePasswordModal,
+      verifyPassword,
+      showJoinRoomForm,
+      showCreateRoomForm,
+      backToLobbySelect,
+      selectRoomMode,
+      confirmCreateRoom,
+      confirmJoinRoom,
+      fillRemainingWithAi,
+      startGameFromLobby,
+      leaveLobbyRoom,
+      switchMainView,
+      requestViewAccess,
+      returnToLobby,
+      updatePlayerName,
+      lockPlayerAnswer,
+      selectNumber,
+      toggleBGM,
+      revealAndCalculateRound,
+      startNextRound,
+      returnToPreviousRound,
+      simulateDisconnect,
+      resetEntireGame,
+      runAiCompleteRound,
+      triggerAllAiThinkAndLock
+    });
+
     // ================= Initialization =================
-    (function init() {
+    (async function init() {
+      await initCloudSync();
       const ruler = document.getElementById('proj-ruler-ticks');
       if (ruler) {
         ruler.innerHTML = Array.from({ length: 25 }).map((_, i) => {
