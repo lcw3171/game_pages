@@ -107,10 +107,10 @@
       <div id="disconnect-countdown" class="font-number text-4xl font-black text-amber-400">10:00</div>
     </div>
     <div class="flex flex-wrap gap-3 justify-center">
-      <button onclick="manualReconnect()" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg transition">
+      <button type="button" onclick="manualReconnect()" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg transition">
         🔄 立即重新連線 (Reconnect)
       </button>
-      <button onclick="forceTimeoutToLobby()" class="px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold border border-zinc-700 transition">
+      <button type="button" onclick="forceTimeoutToLobby()" class="px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold border border-zinc-700 transition">
         🏠 立即返回大廳
       </button>
     </div>
@@ -124,8 +124,8 @@
       <input id="host-password-input" type="password" inputmode="numeric" placeholder="輸入密碼..."
         class="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-700 text-white font-number text-center text-lg tracking-widest mb-4 focus:outline-none focus:border-amber-500" />
       <div class="flex gap-2">
-        <button onclick="closePasswordModal()" class="flex-1 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 font-semibold hover:bg-zinc-700">取消</button>
-        <button onclick="verifyPassword()" class="flex-1 py-2.5 rounded-xl bg-amber-500 text-black font-bold hover:bg-amber-400">確認</button>
+        <button type="button" onclick="closePasswordModal()" class="flex-1 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 font-semibold hover:bg-zinc-700">取消</button>
+        <button type="button" onclick="verifyPassword()" class="flex-1 py-2.5 rounded-xl bg-amber-500 text-black font-bold hover:bg-amber-400">確認</button>
       </div>
     </div>
   </div>
@@ -155,7 +155,7 @@
             <div class="text-xs font-bold text-emerald-300">🔗 已透過邀請連結識別房間</div>
             <div class="text-sm text-white mt-0.5">目標房號：<strong id="url-detected-code" class="font-number text-amber-400 text-lg">----</strong></div>
           </div>
-          <button onclick="quickJoinDetectedRoom()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shrink-0 transition">
+          <button type="button" onclick="quickJoinDetectedRoom()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shrink-0 transition">
             直接加入 →
           </button>
         </div>
@@ -167,7 +167,7 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button onclick="showJoinRoomForm()"
+          <button type="button" onclick="showJoinRoomForm()"
             class="group p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-emerald-500 text-left transition flex flex-col justify-between">
             <div class="w-12 h-12 rounded-xl bg-emerald-950/80 border border-emerald-700/60 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
               🚪
@@ -178,22 +178,33 @@
             </div>
           </button>
 
-          <button onclick="showCreateRoomForm()"
-            class="group p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-amber-500 text-left transition flex flex-col justify-between">
-            <div class="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-700/60 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
-              👑
-            </div>
-            <div>
-              <div class="text-lg font-black text-white group-hover:text-amber-400 transition">創建房間 (主持)</div>
-              <div class="text-xs text-zinc-400 mt-1">支援最多 3 部主持裝置同房協作，自動生成邀請網址</div>
-            </div>
-          </button>
+          <div class="flex flex-col gap-3">
+            <button type="button" onclick="showCreateRoomForm()"
+              class="group flex-1 p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-amber-500 text-left transition flex flex-col justify-between">
+              <div class="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-700/60 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                👑
+              </div>
+              <div>
+                <div class="text-lg font-black text-white group-hover:text-amber-400 transition">創建房間 (主持)</div>
+                <div class="text-xs text-zinc-400 mt-1">支援最多 3 部主持裝置同房協作，自動生成邀請網址</div>
+              </div>
+            </button>
+
+            <button type="button" onclick="openCoHostJoinForm()"
+              class="w-full px-4 py-3 rounded-xl bg-amber-950/35 hover:bg-amber-900/50 border border-amber-600/50 text-left transition flex items-center justify-between gap-2">
+              <div>
+                <div class="text-xs sm:text-sm font-black text-amber-300">🎙️ 協作主持進入</div>
+                <div class="text-[11px] text-zinc-400">最多 2 人 · 輸入 4 位數房號入後台</div>
+              </div>
+              <span class="text-amber-400 font-bold text-sm">→</span>
+            </button>
+          </div>
         </div>
 
-        <div class="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
+        <div class="mt-5 pt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
           <span id="p2p-status-badge" class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            免設定 P2P 跨手機直連引擎已就緒（支援自動偵測離開與斷線）
+            <span id="p2p-status-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="p2p-status-text">P2P 跨手機直連與本機同步引擎已就緒（支援自動偵測離開與斷線）</span>
           </span>
         </div>
       </div>
@@ -201,15 +212,18 @@
       <!-- Step 2A: Join Room Form -->
       <div id="lobby-step-join" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-black text-white">🚪 加入現有房間</h2>
-          <button onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800">← 返回</button>
+          <h2 id="join-form-title" class="text-xl font-black text-white">🚪 加入現有房間</h2>
+          <button type="button" onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800">← 返回</button>
         </div>
 
-        <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">輸入 4 位數房間代碼（額外主持裝置可加 -HOST）</label>
+        <label id="join-code-label" class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">輸入 4 位數房間代碼（額外主持裝置可加 -HOST）</label>
         <input id="join-room-code-input" type="text" maxlength="10" placeholder="例如：8492 或 8492-HOST"
-          class="w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-2xl sm:text-3xl font-black tracking-[0.25em] text-emerald-400 uppercase mb-6 focus:outline-none" />
+          class="w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-2xl sm:text-3xl font-black tracking-[0.25em] text-emerald-400 uppercase mb-2 focus:outline-none" />
+        <p id="join-code-helper" class="text-[11px] text-zinc-400 text-center mb-6">
+          一般參賽者請輸入主持人提供的 4 位數房間代碼。
+        </p>
 
-        <button id="btn-confirm-join" onclick="confirmJoinRoom()"
+        <button id="btn-confirm-join" type="button" onclick="confirmJoinRoom()"
           class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950/50 transition">
           連線並加入房間 →
         </button>
@@ -219,7 +233,7 @@
       <div id="lobby-step-create" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-xl font-black text-white">👑 創建新房間 (主持設定)</h2>
-          <button onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800">← 返回</button>
+          <button type="button" onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800">← 返回</button>
         </div>
 
         <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">選擇參賽人數模式</label>
@@ -239,7 +253,7 @@
           <div>• 【精準重擊】解鎖條件：存活人數 ≤ <span class="text-red-400 font-bold">3 人</span>（誤差 ≤ 1 使對手扣 2 分）</div>
         </div>
 
-        <button id="btn-confirm-create" onclick="confirmCreateRoom()"
+        <button id="btn-confirm-create" type="button" onclick="confirmCreateRoom()"
           class="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-base shadow-lg shadow-amber-950/50 transition">
           建立房間與專屬分享連結 →
         </button>
@@ -251,7 +265,7 @@
           <span class="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold">
             <span id="waiting-mode-label">8</span> 人對戰模式
           </span>
-          <button onclick="leaveLobbyRoom()" class="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/50">
+          <button type="button" onclick="leaveLobbyRoom()" class="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/50">
             離開房間
           </button>
         </div>
@@ -279,7 +293,7 @@
           <div class="text-sm font-bold text-white">
             已加入參賽者 (<span id="waiting-joined-count" class="text-emerald-400 font-number">0</span> / <span id="waiting-total-count" class="font-number">8</span>)
           </div>
-          <button id="btn-fill-ai-lobby" onclick="fillRemainingWithAi()"
+          <button id="btn-fill-ai-lobby" type="button" onclick="fillRemainingWithAi()"
             class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition">
             🤖 一鍵補齊 AI 玩家
           </button>
@@ -287,7 +301,7 @@
 
         <div id="lobby-roster-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6"></div>
 
-        <button id="btn-lobby-start-game" onclick="startGameFromLobby()" disabled
+        <button id="btn-lobby-start-game" type="button" onclick="startGameFromLobby()" disabled
           class="w-full py-4 rounded-2xl bg-emerald-600 disabled:bg-zinc-800 disabled:text-zinc-500 hover:bg-emerald-500 text-white font-black text-base transition shadow-lg">
           ⏳ 等待齊人中...
         </button>
@@ -314,23 +328,23 @@
       </div>
 
       <div class="flex items-center gap-1.5 sm:gap-2">
-        <button id="nav-btn-player" onclick="switchMainView('player')"
+        <button id="nav-btn-player" type="button" onclick="switchMainView('player')"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-black transition">
           📱 參加者端
         </button>
-        <button id="nav-btn-projector" onclick="requestViewAccess('projector')"
+        <button id="nav-btn-projector" type="button" onclick="requestViewAccess('projector')"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
           🖥️ 投影大螢幕
         </button>
-        <button id="nav-btn-host" onclick="requestViewAccess('host')"
+        <button id="nav-btn-host" type="button" onclick="requestViewAccess('host')"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
           🛠️ 主持後台
         </button>
-        <button id="nav-btn-ai" onclick="requestViewAccess('ai')"
+        <button id="nav-btn-ai" type="button" onclick="requestViewAccess('ai')"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
           🤖 AI 測試
         </button>
-        <button onclick="returnToLobby()"
+        <button type="button" onclick="returnToLobby()"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-950/70 text-red-300 hover:bg-red-900/80 border border-red-800/60 transition">
           🏠 返回大廳
         </button>
@@ -424,7 +438,7 @@
     </div>
 
     <!-- Lock Action Button -->
-    <button id="btn-player-lock" onclick="lockPlayerAnswer()"
+    <button id="btn-player-lock" type="button" onclick="lockPlayerAnswer()"
       class="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 text-black font-black text-lg tracking-wider shadow-lg transition">
       🔒 鎖定並提交數字
     </button>
@@ -496,152 +510,252 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2.5">
-        <button id="btn-bgm-toggle" onclick="toggleBGM()"
-          class="px-4 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm border border-zinc-700 transition">
+        <button id="btn-bgm-toggle" type="button" onclick="toggleBGM()"
+          class="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-bold text-zinc-200 transition">
           🔇 緊張音效：關
         </button>
-        <button id="btn-host-reveal" onclick="revealAndCalculateRound()"
-          class="px-5 py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-black text-sm sm:text-base shadow-lg shadow-red-950/60 transition">
-          ⚡ 開牌結算 (REVEAL)
+        <button type="button" onclick="triggerAllAiThinkAndLock()"
+          class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition">
+          🤖 AI 全部出牌鎖定
         </button>
-        <button id="btn-host-next" onclick="startNextRound()"
-          class="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm sm:text-base shadow-lg transition">
-          ➡️ 下一回合 (NEXT)
+        <button type="button" onclick="revealAndCalculateRound()"
+          class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-black text-white shadow-lg transition">
+          ⚡ 開牌並結算本回合
+        </button>
+        <button type="button" onclick="startNextRound()"
+          class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-black text-white shadow-lg transition">
+          ➡️ 進入下一回合
+        </button>
+        <button type="button" onclick="returnToPreviousRound()"
+          class="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-xs font-bold text-amber-300 transition">
+          ↩️ 返回上一 Round
         </button>
       </div>
     </div>
 
+    <!-- Live Calculation Preview Panel -->
+    <div class="glass-panel rounded-2xl p-4 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <div class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">📊 即時開牌結果預覽</div>
+        <div id="host-preview-winner-name" class="text-base sm:text-lg font-black text-white">⏳ 等待鎖定中...</div>
+        <div id="host-preview-detail" class="text-xs text-zinc-400 mt-0.5">等待參賽者加入</div>
+      </div>
+      <div class="bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-3 text-right shrink-0">
+        <div class="text-[10px] text-zinc-400 uppercase">目標答案 (平均 × 0.8)</div>
+        <div id="host-preview-target" class="font-number text-2xl sm:text-3xl font-black text-amber-400">--.--</div>
+      </div>
+    </div>
+
+    <!-- Players Status Grid -->
     <div class="glass-panel rounded-2xl p-4 sm:p-5 border border-zinc-800">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-bold text-zinc-300">👥 參賽者即時選號與分數監控（已淘汰者自動灰階顯示）</h3>
-        <button onclick="triggerAllAiThinkAndLock()" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition">
-          🤖 讓所有未鎖定 AI 立即出牌
+      <h3 class="text-sm font-bold text-zinc-300 mb-3">👥 參賽者即時狀態與分數</h3>
+      <div id="host-players-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+    </div>
+
+    <!-- Mode Rule Thresholds & Utility Controls -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div id="host-rule-card-dup" class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-purple-300">同數無效</span>
+          <span id="host-dup-threshold-label" class="font-number text-xs font-black text-purple-400">≤5人</span>
+        </div>
+        <p class="text-[11px] text-zinc-400 mt-1">存活人數達門檻時，相同數字作廢。</p>
+      </div>
+
+      <div id="host-rule-card-prec" class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-red-300">精準重擊</span>
+          <span id="host-prec-threshold-label" class="font-number text-xs font-black text-red-400">≤3人</span>
+        </div>
+        <p class="text-[11px] text-zinc-400 mt-1">存活人數達門檻且誤差 ≤ 1 時，落敗扣 2 分。</p>
+      </div>
+
+      <div class="p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+        <button type="button" onclick="simulateDisconnect()"
+          class="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-amber-300 transition">
+          📡 測試斷線暫停
         </button>
-      </div>
-      <div id="host-players-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
-    </div>
-
-    <div class="glass-panel rounded-2xl p-4 border border-zinc-800">
-      <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2.5">📜 本局生效規則檢核</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-        <div class="p-3 rounded-xl bg-zinc-950 border border-emerald-800/60">
-          <div class="font-bold text-emerald-400 mb-0.5">✅ 規則 1：平均數 × 0.8</div>
-          <div class="text-zinc-400">全場有效數字平均值乘以 0.8，最接近者勝出，其餘扣 1 分。</div>
-        </div>
-        <div id="host-rule-card-dup" class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-          <div class="font-bold text-purple-400 mb-0.5">規則 2：同數無效 (<span id="host-dup-threshold-label">≤5人</span>解鎖)</div>
-          <div class="text-zinc-400">若有兩位或以上玩家選擇相同數字，該數字直接作廢且不計入平均。</div>
-        </div>
-        <div id="host-rule-card-prec" class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-          <div class="font-bold text-red-400 mb-0.5">規則 3：精準重擊 (<span id="host-prec-threshold-label">≤3人</span>解鎖)</div>
-          <div class="text-zinc-400">存活人數達標時，勝出者若誤差 ≤ 1（或完全命中），落敗者扣 2 分。</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="host-winner-preview-box" class="rounded-3xl p-6 bg-gradient-to-r from-amber-950/90 via-zinc-900 to-amber-950/90 border-2 border-amber-500/70 shadow-2xl">
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black tracking-wider mb-2">
-            <span>🔮 開牌前即時勝者預測 (LIVE PREVIEW)</span>
-          </div>
-          <div id="host-preview-winner-name" class="text-2xl sm:text-3xl font-black text-white">
-            等待所有存活玩家鎖定數字...
-          </div>
-          <div id="host-preview-detail" class="text-xs sm:text-sm text-zinc-300 mt-1">
-            當全體鎖定後，此處將自動計算目標答案與暫定勝出者。
-          </div>
-        </div>
-        <div class="text-center sm:text-right bg-black/50 px-6 py-3 rounded-2xl border border-amber-500/40 shrink-0">
-          <div class="text-[11px] text-amber-400 font-bold uppercase">預測目標答案</div>
-          <div id="host-preview-target" class="font-number text-3xl sm:text-4xl font-black text-amber-400">--.--</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-auto pt-4 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3">
-      <button onclick="simulateDisconnect()"
-        class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-bold border border-zinc-700 transition">
-        📡 測試斷線暫停 (10分鐘超時機制)
-      </button>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <button onclick="returnToPreviousRound()"
-          class="px-5 py-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/50 font-black text-xs sm:text-sm transition">
-          ↩️ 返回上一 ROUND (還原分數並解除鎖定)
-        </button>
-        <button onclick="resetEntireGame()"
-          class="px-5 py-3 rounded-xl bg-red-950/60 hover:bg-red-900/70 text-red-300 border border-red-800/60 font-bold text-xs sm:text-sm transition">
-          🔄 重置全場 (全部回復 10 分)
+        <button type="button" onclick="resetEntireGame()"
+          class="px-3 py-2 rounded-lg bg-red-950/70 hover:bg-red-900/80 border border-red-800/60 text-xs font-bold text-red-300 transition">
+          🔄 重置全場分數
         </button>
       </div>
     </div>
   </main>
 
-  <!-- ================= VIEW 4: AI SIMULATION & TEST CONSOLE ================= -->
-  <main id="view-ai" class="hidden flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6">
-    <div class="glass-panel rounded-3xl p-6 border border-zinc-800">
-      <h2 class="text-xl font-black text-white mb-2">🤖 AI 模擬與快速演練控台</h2>
-      <p class="text-xs text-zinc-400 mb-6">用於單人測試或補齊空位時的 AI 行為控制。</p>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <button onclick="triggerAllAiThinkAndLock()"
-          class="p-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-left transition shadow-lg">
-          <div class="text-lg mb-1">🧠 讓所有 AI 思考並鎖定</div>
-          <div class="text-xs text-indigo-200 font-normal">所有尚未鎖定的 AI 玩家將根據心理博弈權重自動選號並鎖定。</div>
-        </button>
-
-        <button onclick="runAiCompleteRound()"
-          class="p-5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-left transition shadow-lg">
-          <div class="text-lg mb-1">⚡ 自動補齊出牌並立即開牌結算</div>
-          <div class="text-xs text-rose-200 font-normal">自動為所有未鎖定玩家隨機選號，並直接執行本回合開牌扣分。</div>
-        </button>
+  <!-- ================= VIEW 4: AI TEST CONSOLE VIEW ================= -->
+  <main id="view-ai" class="hidden flex-1 max-w-3xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-4">
+    <div class="glass-panel rounded-2xl p-5 border border-zinc-800">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-lg font-black text-white">🤖 AI 測試控台</h2>
+          <p class="text-xs text-zinc-400 mt-0.5">快速模擬 AI 出牌鎖定或一鍵完成整回合結算測試。</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" onclick="triggerAllAiThinkAndLock()"
+            class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition">
+            🤖 AI 全部鎖定
+          </button>
+          <button type="button" onclick="runAiCompleteRound()"
+            class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-black text-black transition">
+            ⚡ 一鍵完成本回合結算
+          </button>
+        </div>
       </div>
-
       <div id="ai-status-list" class="space-y-2"></div>
     </div>
   </main>
 
-  <!-- ================= Core JavaScript Engine ================= -->
   <script>
-    // ================= Zero-Config P2P Multi-Device Sync (PeerJS) =================
-    const PEER_PREFIX = 'scale-judge-room-';
+    // ================= Network & Co-Host Constants =================
+    const PEER_PREFIX = 'scale-judge-v1-';
     const MAX_HOST_DEVICES = 3;
+    const LOCAL_ROOMS_STORAGE_KEY = 'scale_judge_active_rooms_v1';
+
     let peerInstance = null;
-    let hostPeerSessions = []; // Array of { conn, role, uid, name }
     let clientConnection = null;
-    let myPlayerUid = 'player_' + Math.random().toString(36).slice(2, 10);
+    let hostPeerSessions = [];
+    let isLocalFallbackMode = false;
+    let localChannel = null;
+    let localActiveRoomCode = null;
+    let localJoinedUids = [];
+
+    const myPlayerUid = (() => {
+      try {
+        let uid = sessionStorage.getItem('scale_judge_uid');
+        if (!uid) {
+          uid = 'u_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36);
+          sessionStorage.setItem('scale_judge_uid', uid);
+        }
+        return uid;
+      } catch (e) {
+        return 'u_' + Math.random().toString(36).slice(2, 10);
+      }
+    })();
+
+    function readLocalRoomsMap() {
+      try {
+        const raw = localStorage.getItem(LOCAL_ROOMS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function writeLocalRoomsMap(map) {
+      try {
+        localStorage.setItem(LOCAL_ROOMS_STORAGE_KEY, JSON.stringify(map));
+      } catch (e) {}
+    }
+
+    function registerLocalRoom(code, maxPlayers, hostName) {
+      const map = readLocalRoomsMap();
+      map[code] = {
+        code,
+        maxPlayers,
+        hostName,
+        updatedAt: Date.now()
+      };
+      writeLocalRoomsMap(map);
+    }
+
+    function unregisterLocalRoom(code) {
+      if (!code) return;
+      const map = readLocalRoomsMap();
+      delete map[code];
+      writeLocalRoomsMap(map);
+    }
+
+    function ensureLocalChannel(code, onMessage) {
+      localActiveRoomCode = code;
+      if (localChannel) {
+        try { localChannel.close(); } catch (e) {}
+        localChannel = null;
+      }
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          localChannel = new BroadcastChannel('scale_judge_room_' + code);
+          localChannel.onmessage = (ev) => {
+            if (ev && ev.data && typeof onMessage === 'function') {
+              onMessage(ev.data);
+            }
+          };
+        } catch (e) {
+          localChannel = null;
+        }
+      }
+    }
+
+    function sendLocalChannelMessage(payload) {
+      if (!localActiveRoomCode) return;
+      const enriched = {
+        ...payload,
+        senderUid: payload.senderUid || myPlayerUid,
+        ts: Date.now()
+      };
+      if (localChannel) {
+        try { localChannel.postMessage(enriched); } catch (e) {}
+      }
+      try {
+        const key = 'scale_judge_msg_' + localActiveRoomCode;
+        localStorage.setItem(key, JSON.stringify(enriched));
+      } catch (e) {}
+    }
+
+    function updateConnectionBadge(text, isFallback = false) {
+      const dot = document.getElementById('p2p-status-dot');
+      const label = document.getElementById('p2p-status-text');
+      if (dot) {
+        dot.className = isFallback
+          ? 'w-2 h-2 rounded-full bg-amber-400'
+          : 'w-2 h-2 rounded-full bg-emerald-500';
+      }
+      if (label) {
+        label.textContent = text;
+      }
+    }
+
+    function cleanupPeerNetwork() {
+      try {
+        hostPeerSessions.forEach(s => {
+          if (s && s.conn) {
+            try { s.conn.close(); } catch (e) {}
+          }
+        });
+      } catch (e) {}
+      hostPeerSessions = [];
+
+      if (clientConnection) {
+        try { clientConnection.close(); } catch (e) {}
+        clientConnection = null;
+      }
+
+      if (peerInstance) {
+        try { peerInstance.destroy(); } catch (e) {}
+        peerInstance = null;
+      }
+
+      if (lobbyState.isHost && lobbyState.roomCode) {
+        unregisterLocalRoom(lobbyState.roomCode);
+      }
+
+      if (localChannel) {
+        try { localChannel.close(); } catch (e) {}
+        localChannel = null;
+      }
+      localActiveRoomCode = null;
+      localJoinedUids = [];
+    }
 
     function getActiveCoHostCount() {
       return hostPeerSessions.filter(s => s && s.role === 'cohost' && s.conn && s.conn.open).length;
     }
 
-    function cleanupPeerNetwork() {
-      hostPeerSessions.forEach(s => {
-        try {
-          if (s && s.conn) s.conn.close();
-        } catch (e) {}
-      });
-      hostPeerSessions = [];
-
-      if (clientConnection) {
-        try {
-          clientConnection.close();
-        } catch (e) {}
-        clientConnection = null;
-      }
-
-      if (peerInstance) {
-        try {
-          peerInstance.destroy();
-        } catch (e) {}
-        peerInstance = null;
-      }
-    }
-
     function broadcastStateToAllClients(statusOverride = null) {
       if (!lobbyState.isHost) return;
-      const isPlaying = statusOverride ? statusOverride === 'playing' : document.getElementById('view-lobby').classList.contains('hidden');
+      const lobbyEl = document.getElementById('view-lobby');
+      const isPlaying = statusOverride ? statusOverride === 'playing' : (lobbyEl ? lobbyEl.classList.contains('hidden') : false);
       const payload = {
         type: 'SYNC_STATE',
         status: statusOverride || (isPlaying ? 'playing' : 'waiting'),
@@ -662,6 +776,11 @@
         }
       };
 
+      if (isLocalFallbackMode) {
+        sendLocalChannelMessage(payload);
+        return;
+      }
+
       hostPeerSessions = hostPeerSessions.filter(s => s && s.conn && s.conn.open);
       hostPeerSessions.forEach(s => {
         try {
@@ -675,7 +794,8 @@
     function removeParticipantByUid(uid, reasonText = '已離開房間') {
       if (!uid || !lobbyState.isHost) return;
 
-      const isPlaying = document.getElementById('view-lobby').classList.contains('hidden');
+      const lobbyEl = document.getElementById('view-lobby');
+      const isPlaying = lobbyEl ? lobbyEl.classList.contains('hidden') : false;
       const lobbyIdx = lobbyState.joinedPlayers.findIndex(p => p.uid === uid);
       const removedName = lobbyIdx !== -1
         ? lobbyState.joinedPlayers[lobbyIdx].name
@@ -718,7 +838,8 @@
         session.name = (data.name || '副主持').trim();
         showToast(`👑 主持裝置「${session.name}」已加入同房協作 (${currentCoHosts + 2}/${MAX_HOST_DEVICES})`, 'success');
 
-        const isPlaying = document.getElementById('view-lobby').classList.contains('hidden');
+        const lobbyEl = document.getElementById('view-lobby');
+        const isPlaying = lobbyEl ? lobbyEl.classList.contains('hidden') : false;
         session.conn.send({
           type: 'COHOST_ACCEPTED',
           status: isPlaying ? 'playing' : 'waiting',
@@ -756,7 +877,8 @@
       }
 
       if (data.type === 'JOIN_REQUEST') {
-        const isPlaying = document.getElementById('view-lobby').classList.contains('hidden');
+        const lobbyEl = document.getElementById('view-lobby');
+        const isPlaying = lobbyEl ? lobbyEl.classList.contains('hidden') : false;
         const cleanName = (data.name || '').trim() || `玩家${lobbyState.joinedPlayers.length + 1}`;
         session.role = 'participant';
         session.uid = data.uid;
@@ -825,15 +947,23 @@
         ...gameState,
         ...remoteGameState
       };
-      document.getElementById('header-mode-count').textContent = gameState.maxPlayers;
-      document.getElementById('header-room-code').textContent = gameState.roomCode;
+      const modeEl = document.getElementById('header-mode-count');
+      const codeEl = document.getElementById('header-room-code');
+      const lobbyEl = document.getElementById('view-lobby');
+      const headerEl = document.getElementById('game-main-header');
+      if (modeEl) modeEl.textContent = gameState.maxPlayers;
+      if (codeEl) codeEl.textContent = gameState.roomCode;
       authPasscodeVerified = true;
-      document.getElementById('nav-btn-player').style.display = 'none';
-      document.getElementById('nav-btn-projector').style.display = 'inline-block';
-      document.getElementById('nav-btn-host').style.display = 'inline-block';
-      document.getElementById('nav-btn-ai').style.display = 'inline-block';
-      document.getElementById('view-lobby').classList.add('hidden');
-      document.getElementById('game-main-header').classList.remove('hidden');
+      const pBtn = document.getElementById('nav-btn-player');
+      const projBtn = document.getElementById('nav-btn-projector');
+      const hBtn = document.getElementById('nav-btn-host');
+      const aiBtn = document.getElementById('nav-btn-ai');
+      if (pBtn) pBtn.style.display = 'none';
+      if (projBtn) projBtn.style.display = 'inline-block';
+      if (hBtn) hBtn.style.display = 'inline-block';
+      if (aiBtn) aiBtn.style.display = 'inline-block';
+      if (lobbyEl) lobbyEl.classList.add('hidden');
+      if (headerEl) headerEl.classList.remove('hidden');
       switchMainView('projector');
     }
 
@@ -874,7 +1004,8 @@
           clearDisconnectState();
           document.getElementById('game-main-header').classList.add('hidden');
           ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
-            document.getElementById(id).classList.add('hidden');
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
           });
           document.getElementById('view-lobby').classList.remove('hidden');
           backToLobbySelect();
@@ -892,7 +1023,8 @@
           document.getElementById('lobby-step-waiting').classList.remove('hidden');
           renderWaitingRoom();
         } else if (data.status === 'playing' && data.gameState) {
-          const isCurrentlyInLobby = !document.getElementById('view-lobby').classList.contains('hidden');
+          const lobbyEl = document.getElementById('view-lobby');
+          const isCurrentlyInLobby = lobbyEl ? !lobbyEl.classList.contains('hidden') : false;
           if (isCurrentlyInLobby) {
             if (lobbyState.isHost) {
               applyCoHostGameState(data.gameState);
@@ -913,6 +1045,9 @@
             ...data.gameState
           };
           renderAllViews();
+          if (lobbyState.isHost) {
+            broadcastStateToAllClients('playing');
+          }
         }
       }
     }
@@ -972,7 +1107,7 @@
         }
       }
       if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx.resume().catch(() => {});
       }
     }
 
@@ -1090,9 +1225,13 @@
       input.select();
       input.setSelectionRange(0, 99999);
       try {
-        navigator.clipboard.writeText(input.value);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(input.value).catch(() => {});
+        } else {
+          document.execCommand('copy');
+        }
       } catch (e) {
-        document.execCommand('copy');
+        try { document.execCommand('copy'); } catch (err) {}
       }
       showToast('🔗 已複製專屬邀請連結！貼給參加者打開即可自動識別房號', 'success');
     }
@@ -1193,8 +1332,63 @@
     function showJoinRoomForm() {
       document.getElementById('lobby-step-select').classList.add('hidden');
       document.getElementById('lobby-step-join').classList.remove('hidden');
+
+      const titleEl = document.getElementById('join-form-title');
+      const labelEl = document.getElementById('join-code-label');
+      const helperEl = document.getElementById('join-code-helper');
       const input = document.getElementById('join-room-code-input');
-      input.focus();
+      const btn = document.getElementById('btn-confirm-join');
+
+      if (titleEl) titleEl.textContent = '🚪 加入現有房間';
+      if (labelEl) labelEl.textContent = '輸入 4 位數房間代碼（額外主持裝置可加 -HOST）';
+      if (helperEl) helperEl.textContent = '一般參賽者請輸入主持人提供的 4 位數房間代碼。';
+      if (input) {
+        input.dataset.forceCoHost = '';
+        input.maxLength = 10;
+        input.placeholder = '例如：8492 或 8492-HOST';
+        input.className = 'w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-2xl sm:text-3xl font-black tracking-[0.25em] text-emerald-400 uppercase mb-2 focus:outline-none';
+        input.focus();
+      }
+      if (btn) {
+        btn.className = 'w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950/50 transition';
+        btn.textContent = '連線並加入房間 →';
+      }
+    }
+
+    function openCoHostJoinForm() {
+      const nameInput = document.getElementById('lobby-player-name');
+      const currentCoHostSlot = Math.min(getActiveCoHostCount() + 1, MAX_HOST_DEVICES - 1);
+      if (nameInput && !nameInput.value.trim()) {
+        nameInput.value = `協作主持 #${currentCoHostSlot}`;
+      }
+      document.getElementById('lobby-step-select').classList.add('hidden');
+      document.getElementById('lobby-step-join').classList.remove('hidden');
+
+      const titleEl = document.getElementById('join-form-title');
+      const labelEl = document.getElementById('join-code-label');
+      const helperEl = document.getElementById('join-code-helper');
+      const codeInput = document.getElementById('join-room-code-input');
+      const btn = document.getElementById('btn-confirm-join');
+
+      if (titleEl) titleEl.textContent = '🎙️ 協作主持進入後台';
+      if (labelEl) labelEl.textContent = '輸入主持人的 4 位數房間代碼';
+      if (helperEl) helperEl.textContent = '此房間最多允許 2 位協作主持同時進入後台，輸入 4 位數房號即可連線。';
+
+      if (codeInput) {
+        codeInput.dataset.forceCoHost = '1';
+        codeInput.maxLength = 4;
+        codeInput.value = '';
+        codeInput.placeholder = '輸入 4 位數房號（例：A8K2）';
+        codeInput.className = 'w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-amber-500/70 focus:border-amber-400 text-center font-number text-2xl sm:text-3xl font-black tracking-[0.35em] text-amber-400 uppercase mb-2 focus:outline-none';
+        codeInput.focus();
+      }
+
+      if (btn) {
+        btn.className = 'w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-base shadow-lg shadow-amber-950/50 transition';
+        btn.textContent = '確認 4 位數房號並進入主持後台 →';
+      }
+
+      showToast('請輸入主持人的 4 位數房間代碼以進入後台', 'info');
     }
 
     function quickJoinDetectedRoom() {
@@ -1242,14 +1436,11 @@
     }
 
     function confirmCreateRoom() {
-      if (typeof Peer === 'undefined') {
-        showToast('連線模組載入中，請稍候 1 秒再試！', 'warning');
-        return;
-      }
-
       const btn = document.getElementById('btn-confirm-create');
-      btn.disabled = true;
-      btn.textContent = '⏳ 正在建立跨裝置房間節點...';
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ 正在建立房間節點...';
+      }
 
       cleanupPeerNetwork();
 
@@ -1257,11 +1448,93 @@
       const code = generateRoomCode();
       const peerId = PEER_PREFIX + code;
 
-      peerInstance = new Peer(peerId, { debug: 1 });
+      const activateLocalHostFallback = (notifyWarning = true) => {
+        isLocalFallbackMode = true;
+        registerLocalRoom(code, lobbyState.maxPlayers, pName);
+
+        lobbyState.roomCode = code;
+        lobbyState.isHost = true;
+        lobbyState.hostName = pName;
+        lobbyState.joinedPlayers = [];
+        hostPeerSessions = [];
+        localJoinedUids = [];
+
+        ensureLocalChannel(code, (msg) => {
+          if (!msg || !msg.type || msg.senderUid === myPlayerUid) return;
+          const virtualSession = {
+            conn: {
+              open: true,
+              send: (outData) => sendLocalChannelMessage({ ...outData, targetUid: msg.uid, senderUid: myPlayerUid })
+            },
+            role: 'participant',
+            uid: msg.uid || null,
+            name: msg.name || ''
+          };
+          handleHostIncomingMessage(virtualSession, msg);
+        });
+
+        try {
+          const shareUrl = buildRoomShareUrl(code);
+          window.history.replaceState({}, '', shareUrl);
+          const linkInput = document.getElementById('shareable-room-url-input');
+          if (linkInput) linkInput.value = shareUrl;
+        } catch (e) {}
+
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '建立房間與專屬分享連結 →';
+        }
+
+        document.getElementById('lobby-step-create').classList.add('hidden');
+        document.getElementById('lobby-step-waiting').classList.remove('hidden');
+        renderWaitingRoom();
+        updateConnectionBadge('沙盒／本機同源同步模式已啟動（支援同裝置多開分頁測試）', true);
+
+        if (notifyWarning) {
+          showToast(`✅ 房間 [${code}] 已建立（預覽沙盒已自動啟用本機即時同步）`, 'info');
+        }
+      };
+
+      if (typeof Peer === 'undefined') {
+        activateLocalHostFallback(true);
+        return;
+      }
+
+      let fallbackTriggered = false;
+      const safeFallbackOnce = () => {
+        if (fallbackTriggered) return;
+        fallbackTriggered = true;
+        try {
+          if (peerInstance) {
+            peerInstance.destroy();
+            peerInstance = null;
+          }
+        } catch (e) {}
+        activateLocalHostFallback(true);
+      };
+
+      try {
+        peerInstance = new Peer(peerId, { debug: 0 });
+      } catch (err) {
+        safeFallbackOnce();
+        return;
+      }
+
+      const initTimer = setTimeout(() => {
+        if (!peerInstance || !peerInstance.open) {
+          safeFallbackOnce();
+        }
+      }, 3500);
 
       peerInstance.on('open', () => {
-        btn.disabled = false;
-        btn.textContent = '建立房間與專屬分享連結 →';
+        if (fallbackTriggered) return;
+        clearTimeout(initTimer);
+        isLocalFallbackMode = false;
+
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '建立房間與專屬分享連結 →';
+        }
 
         lobbyState.roomCode = code;
         lobbyState.isHost = true;
@@ -1279,6 +1552,7 @@
         document.getElementById('lobby-step-create').classList.add('hidden');
         document.getElementById('lobby-step-waiting').classList.remove('hidden');
         renderWaitingRoom();
+        updateConnectionBadge('免設定 P2P 跨手機直連引擎已就緒（支援自動偵測離開與斷線）', false);
         showToast(`✅ 房間 [${code}] 已上線！複製連結即可讓其他手機加入`, 'success');
       });
 
@@ -1304,100 +1578,195 @@
       });
 
       peerInstance.on('error', (err) => {
-        btn.disabled = false;
-        btn.textContent = '建立房間與專屬分享連結 →';
-        console.error('Host Peer error:', err);
-        if (err.type === 'unavailable-id') {
+        clearTimeout(initTimer);
+        console.warn('Host Peer error / sandbox restriction:', err);
+        if (err && err.type === 'unavailable-id' && !fallbackTriggered) {
           confirmCreateRoom();
-        } else {
-          showToast('建立連線節點失敗，請檢查網路後重試！', 'error');
+          return;
         }
+        safeFallbackOnce();
       });
     }
 
     function confirmJoinRoom() {
-      if (typeof Peer === 'undefined') {
-        showToast('連線模組載入中，請稍候 1 秒再試！', 'warning');
-        return;
-      }
+      const codeInputEl = document.getElementById('join-room-code-input');
+      const rawInput = codeInputEl ? codeInputEl.value.trim().toUpperCase() : '';
+      const forceCoHost = codeInputEl && codeInputEl.dataset.forceCoHost === '1';
+      if (codeInputEl) codeInputEl.dataset.forceCoHost = '';
 
-      const rawInput = document.getElementById('join-room-code-input').value.trim().toUpperCase();
-      const isHostModeCode = rawInput.endsWith('-HOST') || rawInput.endsWith('HOST');
+      const isHostModeCode = forceCoHost || rawInput.endsWith('-HOST') || rawInput.endsWith('HOST');
       const codeInput = rawInput.replace(/-?HOST$/i, '').trim();
 
       if (codeInput.length < 4) {
-        showToast('請輸入完整的房間代碼！', 'error');
+        showToast('請輸入完整的 4 位數房間代碼！', 'error');
         return;
       }
 
       const btn = document.getElementById('btn-confirm-join');
-      btn.disabled = true;
-      btn.textContent = isHostModeCode
-        ? `⏳ 正在以主持裝置連線至房間 [${codeInput}]...`
-        : `⏳ 正在連線至房間 [${codeInput}]...`;
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = isHostModeCode
+          ? `⏳ 正在以主持裝置連線至房間 [${codeInput}]...`
+          : `⏳ 正在連線至房間 [${codeInput}]...`;
+      }
 
       cleanupPeerNetwork();
 
       const pName = document.getElementById('lobby-player-name').value.trim() || (isHostModeCode ? '主持裝置' : '參賽者');
       const targetPeerId = PEER_PREFIX + codeInput;
 
-      peerInstance = new Peer({ debug: 1 });
+      const tryLocalFallbackJoin = () => {
+        const roomsMap = readLocalRoomsMap();
+        const localRoom = roomsMap[codeInput];
+        if (!localRoom) {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '連線並加入房間 →';
+          }
+          showToast(`找不到房間 [${codeInput}] 或主持人尚未開房！`, 'error');
+          cleanupPeerNetwork();
+          return;
+        }
 
-      const connectTimeout = setTimeout(() => {
-        if (!clientConnection || !clientConnection.open) {
+        isLocalFallbackMode = true;
+        lobbyState.roomCode = codeInput;
+        lobbyState.isHost = isHostModeCode;
+
+        try {
+          window.history.replaceState({}, '', buildRoomShareUrl(codeInput));
+        } catch (e) {}
+
+        ensureLocalChannel(codeInput, (msg) => {
+          if (!msg || !msg.type) return;
+          if (msg.targetUid && msg.targetUid !== myPlayerUid) return;
+          if (msg.senderUid === myPlayerUid) return;
+          handleClientIncomingMessage(msg);
+        });
+
+        clientConnection = {
+          open: true,
+          send: (payload) => {
+            sendLocalChannelMessage({
+              ...payload,
+              senderUid: myPlayerUid
+            });
+          },
+          close: () => {}
+        };
+
+        if (btn) {
           btn.disabled = false;
           btn.textContent = '連線並加入房間 →';
+        }
+
+        updateConnectionBadge('本機同源同步模式已連線（沙盒備援）', true);
+
+        if (isHostModeCode) {
+          clientConnection.send({
+            type: 'COHOST_JOIN_REQUEST',
+            uid: myPlayerUid,
+            name: pName
+          });
+        } else {
+          clientConnection.send({
+            type: 'JOIN_REQUEST',
+            uid: myPlayerUid,
+            name: pName
+          });
+        }
+      };
+
+      if (typeof Peer === 'undefined') {
+        tryLocalFallbackJoin();
+        return;
+      }
+
+      let joinFallbackTriggered = false;
+      const safeJoinFallback = () => {
+        if (joinFallbackTriggered) return;
+        joinFallbackTriggered = true;
+        try {
+          if (peerInstance) {
+            peerInstance.destroy();
+            peerInstance = null;
+          }
+        } catch (e) {}
+        tryLocalFallbackJoin();
+      };
+
+      let connectTimeout = null;
+      try {
+        peerInstance = new Peer({ debug: 0 });
+      } catch (err) {
+        safeJoinFallback();
+        return;
+      }
+
+      connectTimeout = setTimeout(() => {
+        if (!clientConnection || !clientConnection.open) {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '連線並加入房間 →';
+          }
           showToast(`找不到房間 [${codeInput}] 或主持人尚未開房！`, 'error');
           cleanupPeerNetwork();
         }
       }, 9000);
 
       peerInstance.on('open', () => {
-        const conn = peerInstance.connect(targetPeerId, { reliable: true });
-        clientConnection = conn;
+        if (joinFallbackTriggered) return;
+        try {
+          const conn = peerInstance.connect(targetPeerId, { reliable: true });
+          clientConnection = conn;
 
-        conn.on('open', () => {
+          conn.on('open', () => {
+            clearTimeout(connectTimeout);
+            isLocalFallbackMode = false;
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = '連線並加入房間 →';
+            }
+
+            lobbyState.roomCode = codeInput;
+            lobbyState.isHost = isHostModeCode;
+
+            try {
+              window.history.replaceState({}, '', buildRoomShareUrl(codeInput));
+            } catch (e) {}
+
+            if (isHostModeCode) {
+              conn.send({
+                type: 'COHOST_JOIN_REQUEST',
+                uid: myPlayerUid,
+                name: pName
+              });
+            } else {
+              conn.send({
+                type: 'JOIN_REQUEST',
+                uid: myPlayerUid,
+                name: pName
+              });
+            }
+          });
+
+          conn.on('data', (data) => handleClientIncomingMessage(data));
+
+          conn.on('close', () => {
+            const headerEl = document.getElementById('game-main-header');
+            if (headerEl && !headerEl.classList.contains('hidden')) {
+              simulateDisconnect();
+            }
+          });
+        } catch (err) {
           clearTimeout(connectTimeout);
-          btn.disabled = false;
-          btn.textContent = '連線並加入房間 →';
-
-          lobbyState.roomCode = codeInput;
-          lobbyState.isHost = isHostModeCode;
-
-          try {
-            window.history.replaceState({}, '', buildRoomShareUrl(codeInput));
-          } catch (e) {}
-
-          if (isHostModeCode) {
-            conn.send({
-              type: 'COHOST_JOIN_REQUEST',
-              uid: myPlayerUid,
-              name: pName
-            });
-          } else {
-            conn.send({
-              type: 'JOIN_REQUEST',
-              uid: myPlayerUid,
-              name: pName
-            });
-          }
-        });
-
-        conn.on('data', (data) => handleClientIncomingMessage(data));
-
-        conn.on('close', () => {
-          if (!document.getElementById('game-main-header').classList.contains('hidden')) {
-            simulateDisconnect();
-          }
-        });
+          safeJoinFallback();
+        }
       });
 
       peerInstance.on('error', (err) => {
         clearTimeout(connectTimeout);
-        btn.disabled = false;
-        btn.textContent = '連線並加入房間 →';
-        console.error('Client Peer error:', err);
-        showToast(`無法連接至房間 [${codeInput}]，請確認代碼是否正確！`, 'error');
+        console.warn('Client Peer error / sandbox restriction:', err);
+        safeJoinFallback();
       });
     }
 
@@ -1585,7 +1954,8 @@
       clearDisconnectState();
       document.getElementById('game-main-header').classList.add('hidden');
       ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
-        document.getElementById(id).classList.add('hidden');
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
       });
       document.getElementById('view-lobby').classList.remove('hidden');
       backToLobbySelect();
@@ -1691,7 +2061,8 @@
     }
 
     window.addEventListener('offline', () => {
-      if (!document.getElementById('game-main-header').classList.contains('hidden')) {
+      const headerEl = document.getElementById('game-main-header');
+      if (headerEl && !headerEl.classList.contains('hidden')) {
         simulateDisconnect();
       }
     });
@@ -2293,12 +2664,46 @@
     // ================= Initialization & URL Room Parameter Check =================
     (function init() {
       try {
+        window.addEventListener('unhandledrejection', (event) => {
+          const reasonMsg = String(event?.reason?.message || event?.reason || '');
+          if (reasonMsg.includes('WebSocket') || reasonMsg.includes('SecurityError') || reasonMsg.includes('peerjs')) {
+            event.preventDefault();
+          }
+        });
+
+        window.addEventListener('storage', (ev) => {
+          if (!ev || !ev.key || !ev.key.startsWith('scale_judge_msg_') || !ev.newValue) return;
+          try {
+            const parsed = JSON.parse(ev.newValue);
+            if (!parsed || parsed.senderUid === myPlayerUid) return;
+            if (parsed.targetUid && parsed.targetUid !== myPlayerUid) return;
+
+            if (lobbyState.isHost && localActiveRoomCode && ev.key.endsWith(localActiveRoomCode)) {
+              const virtualSession = {
+                conn: {
+                  open: true,
+                  send: (outData) => sendLocalChannelMessage({ ...outData, targetUid: parsed.uid, senderUid: myPlayerUid })
+                },
+                role: 'participant',
+                uid: parsed.uid || null,
+                name: parsed.name || ''
+              };
+              handleHostIncomingMessage(virtualSession, parsed);
+            } else if (!lobbyState.isHost && localActiveRoomCode && ev.key.endsWith(localActiveRoomCode)) {
+              handleClientIncomingMessage(parsed);
+            }
+          } catch (e) {}
+        });
+
         const params = new URLSearchParams(window.location.search);
         const requestedRoom = (params.get('request_room') || params.get('room') || '').trim().toUpperCase();
         if (requestedRoom) {
-          document.getElementById('join-room-code-input').value = requestedRoom;
-          document.getElementById('url-detected-code').textContent = requestedRoom;
-          document.getElementById('url-room-detected-banner').classList.remove('hidden');
+          const codeInput = document.getElementById('join-room-code-input');
+          const detectedCodeEl = document.getElementById('url-detected-code');
+          const bannerEl = document.getElementById('url-room-detected-banner');
+          if (codeInput) codeInput.value = requestedRoom;
+          if (detectedCodeEl) detectedCodeEl.textContent = requestedRoom;
+          if (bannerEl) bannerEl.classList.remove('hidden');
         }
       } catch (e) {}
     })();
