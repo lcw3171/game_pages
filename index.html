@@ -29,6 +29,22 @@
         linear-gradient(to bottom, #09090b, #050507);
     }
 
+    /* Reference-inspired Scale & Grid Background for Projector */
+    .scale-blueprint-bg {
+      background-color: #0b0b0c;
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+
+    .beige-card-box {
+      background-color: #d6cfc2;
+      color: #141413;
+      border: 2px solid #9c9588;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 8px 24px rgba(0, 0, 0, 0.65);
+    }
+
     .glass-panel {
       background: rgba(24, 24, 27, 0.85);
       backdrop-filter: blur(12px);
@@ -134,7 +150,6 @@
 
       <!-- Step 1: Select Role (Join or Create) -->
       <div id="lobby-step-select" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
-        <!-- Auto-detected Room Banner when opened via ?request_room=XXXX -->
         <div id="url-room-detected-banner" class="hidden mb-5 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/70 flex items-center justify-between gap-3">
           <div>
             <div class="text-xs font-bold text-emerald-300">🔗 已透過邀請連結識別房間</div>
@@ -170,7 +185,7 @@
             </div>
             <div>
               <div class="text-lg font-black text-white group-hover:text-amber-400 transition">創建房間 (主持)</div>
-              <div class="text-xs text-zinc-400 mt-1">自動生成專屬邀請網址 (?request_room=) 讓不同手機直連</div>
+              <div class="text-xs text-zinc-400 mt-1">支援最多 3 部主持裝置同房協作，自動生成邀請網址</div>
             </div>
           </button>
         </div>
@@ -190,9 +205,9 @@
           <button onclick="backToLobbySelect()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800">← 返回</button>
         </div>
 
-        <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">輸入 4 位數房間代碼</label>
-        <input id="join-room-code-input" type="text" maxlength="6" placeholder="例如：8492"
-          class="w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-3xl font-black tracking-[0.35em] text-emerald-400 uppercase mb-6 focus:outline-none" />
+        <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">輸入 4 位數房間代碼（額外主持裝置可加 -HOST）</label>
+        <input id="join-room-code-input" type="text" maxlength="10" placeholder="例如：8492 或 8492-HOST"
+          class="w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-2xl sm:text-3xl font-black tracking-[0.25em] text-emerald-400 uppercase mb-6 focus:outline-none" />
 
         <button id="btn-confirm-join" onclick="confirmJoinRoom()"
           class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950/50 transition">
@@ -217,12 +232,11 @@
           <button type="button" onclick="selectRoomMode(10)" data-mode="10" class="mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition">10 人局</button>
         </div>
 
-        <!-- Mode Dynamic Rules Preview -->
         <div id="create-mode-rules-preview" class="p-4 rounded-2xl bg-zinc-950/90 border border-zinc-800 text-xs text-zinc-300 space-y-1.5 mb-6">
           <div class="font-bold text-amber-400">📋 8 人局平衡規則門檻：</div>
           <div>• 基礎規則：全場平均數 × 0.8，最接近者勝出（其餘扣 1 分）</div>
           <div>• 【同數無效】解鎖條件：存活人數 ≤ <span class="text-white font-bold">5 人</span></div>
-          <div>• 【精準重擊】解鎖條件：存活人數 ≤ <span class="text-red-400 font-bold">3 人</span>（貼近目標者使對手扣 2 分）</div>
+          <div>• 【精準重擊】解鎖條件：存活人數 ≤ <span class="text-red-400 font-bold">3 人</span>（誤差 ≤ 1 使對手扣 2 分）</div>
         </div>
 
         <button id="btn-confirm-create" onclick="confirmCreateRoom()"
@@ -242,14 +256,12 @@
           </button>
         </div>
 
-        <!-- Room Code & Direct Share Link Display -->
         <div class="bg-zinc-950 border-2 border-dashed border-amber-500/60 rounded-2xl p-4 text-center mb-5">
           <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">房間代碼 (Room Code)</div>
           <div id="display-room-code" class="font-number text-4xl sm:text-5xl font-black text-amber-400 tracking-[0.35em] select-all mb-3">
             ----
           </div>
 
-          <!-- Shareable URL Bar (?request_room=XXXX) -->
           <div id="host-share-link-box" class="pt-3 border-t border-zinc-800/90 flex flex-col gap-2">
             <div class="text-[11px] text-emerald-400 font-bold">🔗 專屬邀請網址（參加者打開即可自動識別房號加入）：</div>
             <div class="flex items-center gap-2">
@@ -263,7 +275,6 @@
           </div>
         </div>
 
-        <!-- Joined Roster -->
         <div class="flex items-center justify-between mb-3">
           <div class="text-sm font-bold text-white">
             已加入參賽者 (<span id="waiting-joined-count" class="text-emerald-400 font-number">0</span> / <span id="waiting-total-count" class="font-number">8</span>)
@@ -287,7 +298,6 @@
   <!-- ================= MAIN TOP NAVIGATION HEADER (In-Game) ================= -->
   <header id="game-main-header" class="hidden sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800 px-3 sm:px-6 py-2.5">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <!-- Left Info -->
       <div class="flex items-center gap-2.5">
         <span class="text-red-500 text-xl">♦</span>
         <div>
@@ -303,7 +313,6 @@
         </div>
       </div>
 
-      <!-- Center / Right View Switchers -->
       <div class="flex items-center gap-1.5 sm:gap-2">
         <button id="nav-btn-player" onclick="switchMainView('player')"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-black transition">
@@ -322,42 +331,70 @@
           🤖 AI 測試
         </button>
         <button onclick="returnToLobby()"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800/60 transition ml-1">
+          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-950/70 text-red-300 hover:bg-red-900/80 border border-red-800/60 transition">
           🏠 返回大廳
         </button>
       </div>
     </div>
   </header>
 
-  <!-- ================= VIEW 1: PLAYER CONTROLLER VIEW ================= -->
-  <main id="view-player" class="hidden flex-1 max-w-2xl w-full mx-auto p-3 sm:p-5 flex flex-col justify-between">
-    <!-- Player Status Card -->
-    <div class="glass-panel rounded-2xl p-4 mb-3 border border-zinc-800">
-      <div class="flex items-center justify-between gap-3 mb-3">
-        <div class="flex items-center gap-2.5 flex-1 min-w-0">
-          <span id="player-seat-badge" class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 font-number font-bold text-white text-xs shrink-0">P1</span>
-          <input id="player-name-input" type="text" maxlength="12" onchange="updatePlayerName(this.value)"
-            class="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1 text-sm font-bold text-white w-full max-w-[160px] focus:outline-none focus:border-amber-500" />
+  <!-- ================= VIEW 1: PLAYER PARTICIPANT VIEW ================= -->
+  <main id="view-player" class="hidden flex-1 max-w-2xl w-full mx-auto p-3 sm:p-5 flex flex-col">
+    <div class="glass-panel rounded-2xl p-3.5 sm:p-4 mb-3 space-y-3">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0 flex-1">
+          <span id="player-seat-badge" class="px-2.5 py-1 rounded-lg bg-zinc-800 font-number text-xs font-black text-amber-400 shrink-0">P1</span>
+          <input id="player-name-input" type="text" maxlength="12" onchange="updatePlayerName(this.value)" placeholder="你的名稱..."
+            class="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-white font-bold text-sm focus:outline-none focus:border-amber-500" />
         </div>
         <div class="flex items-center gap-3 shrink-0">
           <div class="text-right">
-            <div class="text-[10px] text-zinc-400 uppercase">回合</div>
-            <div class="font-number font-black text-base text-white">R<span id="player-round-num">1</span></div>
+            <div class="text-[10px] text-zinc-400">回合</div>
+            <div class="font-number font-black text-sm text-white">R<span id="player-round-num">1</span></div>
           </div>
-          <div class="h-7 w-[1px] bg-zinc-800"></div>
-          <div class="text-right">
-            <div class="text-[10px] text-zinc-400 uppercase">剩餘生命分</div>
+          <div class="text-right bg-zinc-950 px-3 py-1 rounded-xl border border-zinc-800">
+            <div class="text-[10px] text-zinc-400">生命分</div>
             <div id="player-score-display" class="font-number font-black text-2xl text-emerald-400">10</div>
           </div>
         </div>
       </div>
 
-      <!-- Active Rules Banner for Player -->
-      <div id="player-active-rules-bar" class="text-[11px] bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-300 flex flex-wrap items-center gap-2">
-        <span class="text-amber-400 font-bold">生效規則：</span>
-        <span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200">平均 × 0.8</span>
-        <span id="player-rule-dup-badge" class="hidden px-2 py-0.5 rounded bg-purple-950 border border-purple-700 text-purple-300 font-bold">同數無效</span>
-        <span id="player-rule-prec-badge" class="hidden px-2 py-0.5 rounded bg-red-950 border border-red-700 text-red-300 font-bold">精準重擊 (扣2分)</span>
+      <!-- Active Rules Banner for Player (Detailed Explanations + Live Active Status) -->
+      <div id="player-active-rules-bar" class="text-xs bg-zinc-950/90 border border-zinc-800 rounded-2xl p-3 text-zinc-300 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-amber-400 font-black tracking-wide">📜 三大審判規則與即時生效狀態</span>
+          <span id="player-alive-summary" class="text-[11px] font-number text-zinc-400">存活：-- 人</span>
+        </div>
+
+        <div id="player-rule-item-avg" class="p-2.5 rounded-xl bg-emerald-950/35 border border-emerald-600/60 flex items-start justify-between gap-2">
+          <div>
+            <div class="font-bold text-emerald-300">1. 平均數 × 0.8（核心勝出規則）</div>
+            <div class="text-[11px] text-zinc-300 mt-0.5 leading-relaxed">
+              計算所有「有效數字」的平均數再乘以 <strong class="text-amber-300">0.8</strong> 得出目標答案；數字最接近目標者勝出不扣分，其餘落敗者扣 <strong class="text-red-400">1 分</strong>。
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded-md bg-emerald-500 text-black font-black text-[10px] shrink-0">生效中</span>
+        </div>
+
+        <div id="player-rule-item-dup" class="p-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800 flex items-start justify-between gap-2 transition">
+          <div>
+            <div id="player-rule-dup-title" class="font-bold text-zinc-400">2. 同數無效（存活 ≤ 5 人解鎖）</div>
+            <div class="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
+              當存活人數降至指定門檻或以下時，若有多位玩家選擇<strong>完全相同的數字</strong>，該重複數字會立即作廢，不計入平均數亦無法勝出。
+            </div>
+          </div>
+          <span id="player-rule-dup-badge" class="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-500 font-black text-[10px] shrink-0">未生效</span>
+        </div>
+
+        <div id="player-rule-item-prec" class="p-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800 flex items-start justify-between gap-2 transition">
+          <div>
+            <div id="player-rule-prec-title" class="font-bold text-zinc-400">3. 精準重擊（存活 ≤ 3 人解鎖）</div>
+            <div class="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
+              當存活人數降至指定門檻或以下且勝出者與目標誤差 <strong class="text-amber-300">≤ 1.0</strong> 時，觸發精準重擊，所有落敗者改為扣 <strong class="text-red-400">2 分</strong>！
+            </div>
+          </div>
+          <span id="player-rule-prec-badge" class="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-500 font-black text-[10px] shrink-0">未生效</span>
+        </div>
       </div>
     </div>
 
@@ -394,71 +431,59 @@
   </main>
 
   <!-- ================= VIEW 2: PROJECTOR BIG SCREEN VIEW ================= -->
-  <main id="view-projector" class="hidden flex-1 flex flex-col justify-between p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
-    <!-- Top Status & Target Scale Bar -->
-    <div class="glass-panel rounded-3xl p-4 sm:p-6 border border-zinc-800 mb-4">
-      <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <div class="flex items-center gap-3">
-          <div class="px-4 py-1.5 rounded-xl bg-red-950/80 border border-red-700/70 font-number font-black text-xl sm:text-2xl text-red-400">
-            ROUND <span id="proj-round-num">1</span>
-          </div>
-          <div id="proj-phase-badge" class="px-4 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-sm sm:text-base animate-pulse">
-            ⏳ 全場思考與鎖定中...
-          </div>
-        </div>
+  <main id="view-projector" class="hidden flex-1 flex flex-col justify-between p-3 sm:p-6 max-w-[1600px] w-full mx-auto scale-blueprint-bg rounded-3xl border border-zinc-800/90 my-2 relative overflow-hidden">
+    <svg class="pointer-events-none absolute inset-0 w-full h-full opacity-20" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <line x1="600" y1="30" x2="600" y2="670" stroke="#9ca3af" stroke-width="3" />
+      <line x1="0" y1="350" x2="1200" y2="350" stroke="#9ca3af" stroke-width="2" />
+      <line x1="340" y1="130" x2="860" y2="130" stroke="#9ca3af" stroke-width="3" />
+      <path d="M340 130 L250 280 L430 280 Z" fill="none" stroke="#9ca3af" stroke-width="2" />
+      <path d="M860 130 L770 280 L950 280 Z" fill="none" stroke="#9ca3af" stroke-width="2" />
+      <polygon points="560,670 640,670 600,610" fill="none" stroke="#9ca3af" stroke-width="2.5" />
+    </svg>
 
-        <!-- Active Rules Indicators -->
-        <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-          <span class="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 font-bold">
-            📐 平均數 × 0.8
-          </span>
-          <span id="proj-rule-dup" class="px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold">
-            🚫 同數無效 (≤5人)
-          </span>
-          <span id="proj-rule-prec" class="px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold">
-            ⚡ 精準重擊 (≤3人)
-          </span>
+    <div class="relative z-10 flex flex-wrap items-center justify-between gap-3 mb-3">
+      <div class="flex items-center gap-2.5">
+        <div class="px-3.5 py-1 rounded bg-zinc-900/90 border border-zinc-600 font-number font-black text-lg sm:text-xl text-white">
+          ROUND <span id="proj-round-num">1</span>
+        </div>
+        <div id="proj-phase-badge" class="px-3.5 py-1 rounded bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-xs sm:text-sm">
+          ⏳ 選號鎖定中...
         </div>
       </div>
 
-      <!-- Target Result Display -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center bg-zinc-950/90 rounded-2xl p-4 border border-zinc-800/80">
-        <div class="text-center md:text-left">
-          <div class="text-xs text-zinc-400 uppercase tracking-wider">有效數字平均數</div>
-          <div id="proj-avg-display" class="font-number text-2xl sm:text-3xl font-black text-zinc-200">--.--</div>
-        </div>
-
-        <div class="text-center border-y md:border-y-0 md:border-x border-zinc-800 py-2 md:py-0">
-          <div class="text-xs text-amber-400 font-bold uppercase tracking-widest">最終目標值 (平均 × 0.8)</div>
-          <div id="proj-target-display" class="font-number text-4xl sm:text-6xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
-            ??.??
-          </div>
-        </div>
-
-        <div class="text-center md:text-right">
-          <div class="text-xs text-zinc-400 uppercase tracking-wider">本回合裁決結果</div>
-          <div id="proj-notice-display" class="text-sm sm:text-base font-bold text-emerald-400 mt-1">
-            等待所有參賽者鎖定數字
-          </div>
-        </div>
-      </div>
-
-      <!-- Decorative Scale Ruler -->
-      <div class="mt-4 pt-2 flex flex-col items-center">
-        <div id="proj-ruler-ticks" class="w-full flex items-end justify-between px-2"></div>
-        <div class="w-full flex justify-between text-[10px] font-number text-zinc-500 mt-1 px-1">
-          <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
-        </div>
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="px-2.5 py-1 rounded bg-zinc-900/90 border border-zinc-700 text-zinc-200 font-bold">
+          平均 × 0.8
+        </span>
+        <span id="proj-rule-dup" class="px-2.5 py-1 rounded bg-zinc-900/60 border border-zinc-800 text-zinc-500 font-bold">
+          同數無效 (≤5人)
+        </span>
+        <span id="proj-rule-prec" class="px-2.5 py-1 rounded bg-zinc-900/60 border border-zinc-800 text-zinc-500 font-bold">
+          精準重擊 (≤3人)
+        </span>
       </div>
     </div>
 
-    <!-- Players Cards Grid (Auto adapts 5 to 10 columns) -->
-    <div id="proj-players-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 my-auto"></div>
+    <div id="proj-players-grid" class="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5 my-auto py-2"></div>
+
+    <div class="relative z-10 mt-4 pt-3 flex flex-col items-center">
+      <div id="proj-notice-display" class="text-xs sm:text-sm font-bold text-amber-300 mb-2 text-center min-h-[20px]">
+        等待所有存活參賽者完成鎖定
+      </div>
+      <div class="flex items-center justify-center gap-4">
+        <span class="text-2xl sm:text-4xl font-black text-white tracking-[0.25em]">答 案</span>
+        <div id="proj-target-display" class="beige-card-box font-number text-3xl sm:text-5xl font-black px-8 sm:px-12 py-2.5 sm:py-3 rounded-sm min-w-[150px] sm:min-w-[200px] text-center">
+          ??.??
+        </div>
+      </div>
+      <div class="text-[11px] font-number text-zinc-400 mt-2">
+        有效數字平均數：<span id="proj-avg-display" class="text-zinc-200 font-bold">--.--</span>
+      </div>
+    </div>
   </main>
 
   <!-- ================= VIEW 3: HOST BACKSTAGE CONTROL VIEW ================= -->
   <main id="view-host" class="hidden flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-5">
-    <!-- Top Primary Control Bar -->
     <div class="glass-panel rounded-2xl p-4 sm:p-5 border border-zinc-800 flex flex-wrap items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-2">
@@ -486,7 +511,6 @@
       </div>
     </div>
 
-    <!-- Live Players Status Monitoring Grid -->
     <div class="glass-panel rounded-2xl p-4 sm:p-5 border border-zinc-800">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-bold text-zinc-300">👥 參賽者即時選號與分數監控（已淘汰者自動灰階顯示）</h3>
@@ -497,7 +521,6 @@
       <div id="host-players-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
     </div>
 
-    <!-- Active Rules Reference Panel (Only Core Rules) -->
     <div class="glass-panel rounded-2xl p-4 border border-zinc-800">
       <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2.5">📜 本局生效規則檢核</h3>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
@@ -516,7 +539,6 @@
       </div>
     </div>
 
-    <!-- Large Pre-Reveal Winner Prediction Banner -->
     <div id="host-winner-preview-box" class="rounded-3xl p-6 bg-gradient-to-r from-amber-950/90 via-zinc-900 to-amber-950/90 border-2 border-amber-500/70 shadow-2xl">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
@@ -537,7 +559,6 @@
       </div>
     </div>
 
-    <!-- Bottom Utility Bar: Return to Previous Round & Reset Game -->
     <div class="mt-auto pt-4 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3">
       <button onclick="simulateDisconnect()"
         class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-bold border border-zinc-700 transition">
@@ -585,32 +606,39 @@
   <script>
     // ================= Zero-Config P2P Multi-Device Sync (PeerJS) =================
     const PEER_PREFIX = 'scale-judge-room-';
+    const MAX_HOST_DEVICES = 3;
     let peerInstance = null;
-    // Track each client connection alongside its associated player uid & name
-    let hostPeerSessions = []; // Array of { conn, uid, name }
-    let clientConnection = null; // Participant holds connection to Host
+    let hostPeerSessions = []; // Array of { conn, role, uid, name }
+    let clientConnection = null;
     let myPlayerUid = 'player_' + Math.random().toString(36).slice(2, 10);
 
-    function cleanupPeerNetwork() {
-      try {
-        hostPeerSessions.forEach(s => {
-          if (s && s.conn) {
-            try { s.conn.close(); } catch (e) {}
-          }
-        });
-        hostPeerSessions = [];
-        if (clientConnection) {
-          try { clientConnection.close(); } catch (e) {}
-          clientConnection = null;
-        }
-        if (peerInstance) {
-          try { peerInstance.destroy(); } catch (e) {}
-          peerInstance = null;
-        }
-      } catch (e) {}
+    function getActiveCoHostCount() {
+      return hostPeerSessions.filter(s => s && s.role === 'cohost' && s.conn && s.conn.open).length;
     }
 
-    // Host broadcasts current waiting room or live game state to all connected phones
+    function cleanupPeerNetwork() {
+      hostPeerSessions.forEach(s => {
+        try {
+          if (s && s.conn) s.conn.close();
+        } catch (e) {}
+      });
+      hostPeerSessions = [];
+
+      if (clientConnection) {
+        try {
+          clientConnection.close();
+        } catch (e) {}
+        clientConnection = null;
+      }
+
+      if (peerInstance) {
+        try {
+          peerInstance.destroy();
+        } catch (e) {}
+        peerInstance = null;
+      }
+    }
+
     function broadcastStateToAllClients(statusOverride = null) {
       if (!lobbyState.isHost) return;
       const isPlaying = statusOverride ? statusOverride === 'playing' : document.getElementById('view-lobby').classList.contains('hidden');
@@ -644,7 +672,6 @@
       });
     }
 
-    // Remove a player from waiting room or live game when they leave or disconnect
     function removeParticipantByUid(uid, reasonText = '已離開房間') {
       if (!uid || !lobbyState.isHost) return;
 
@@ -662,7 +689,6 @@
           broadcastStateToAllClients('waiting');
         }
       } else {
-        // In an active game, mark disconnected human player as OUT or remove if still unplayed
         const gp = gameState.players.find(p => p.uid === uid);
         if (gp && !gp.isAi && !gp.eliminated) {
           gp.eliminated = true;
@@ -675,13 +701,64 @@
       }
     }
 
-    // Host processes messages sent by participant phones
     function handleHostIncomingMessage(session, data) {
       if (!data || !data.type) return;
+
+      if (data.type === 'COHOST_JOIN_REQUEST') {
+        const currentCoHosts = getActiveCoHostCount();
+        if (currentCoHosts >= MAX_HOST_DEVICES - 1) {
+          session.conn.send({
+            type: 'JOIN_REJECTED',
+            reason: `主持裝置已達上限（最多 ${MAX_HOST_DEVICES} 部主持裝置同時連線）！`
+          });
+          return;
+        }
+        session.role = 'cohost';
+        session.uid = data.uid;
+        session.name = (data.name || '副主持').trim();
+        showToast(`👑 主持裝置「${session.name}」已加入同房協作 (${currentCoHosts + 2}/${MAX_HOST_DEVICES})`, 'success');
+
+        const isPlaying = document.getElementById('view-lobby').classList.contains('hidden');
+        session.conn.send({
+          type: 'COHOST_ACCEPTED',
+          status: isPlaying ? 'playing' : 'waiting',
+          roomCode: lobbyState.roomCode,
+          maxPlayers: lobbyState.maxPlayers,
+          hostName: lobbyState.hostName,
+          lobbyPlayers: lobbyState.joinedPlayers,
+          gameState: {
+            roomCode: gameState.roomCode,
+            maxPlayers: gameState.maxPlayers,
+            round: gameState.round,
+            phase: gameState.phase,
+            answer: gameState.answer,
+            winnerIds: gameState.winnerIds,
+            invalidNumbers: gameState.invalidNumbers,
+            roundNotice: gameState.roundNotice,
+            players: gameState.players
+          }
+        });
+        return;
+      }
+
+      if (data.type === 'HOST_REMOTE_ACTION') {
+        if (session.role !== 'cohost') return;
+        const act = data.action;
+        if (act === 'START_GAME') startGameFromLobby();
+        else if (act === 'FILL_AI') fillRemainingWithAi();
+        else if (act === 'REVEAL') revealAndCalculateRound();
+        else if (act === 'NEXT_ROUND') startNextRound();
+        else if (act === 'PREV_ROUND') returnToPreviousRound();
+        else if (act === 'RESET_GAME') resetEntireGame();
+        else if (act === 'AI_LOCK') triggerAllAiThinkAndLock();
+        else if (act === 'AI_COMPLETE') runAiCompleteRound();
+        return;
+      }
 
       if (data.type === 'JOIN_REQUEST') {
         const isPlaying = document.getElementById('view-lobby').classList.contains('hidden');
         const cleanName = (data.name || '').trim() || `玩家${lobbyState.joinedPlayers.length + 1}`;
+        session.role = 'participant';
         session.uid = data.uid;
         session.name = cleanName;
 
@@ -734,11 +811,32 @@
       } else if (data.type === 'LEAVE_LOBBY') {
         const leavingUid = data.uid || session.uid;
         session.uid = null;
-        removeParticipantByUid(leavingUid, '已離開房間');
+        if (session.role === 'cohost') {
+          showToast(`👑 主持裝置「${session.name || '副主持'}」已離開`, 'info');
+        } else {
+          removeParticipantByUid(leavingUid, '已離開房間');
+        }
       }
     }
 
-    // Participant processes state updates received from Host
+    function applyCoHostGameState(remoteGameState) {
+      if (!remoteGameState) return;
+      gameState = {
+        ...gameState,
+        ...remoteGameState
+      };
+      document.getElementById('header-mode-count').textContent = gameState.maxPlayers;
+      document.getElementById('header-room-code').textContent = gameState.roomCode;
+      authPasscodeVerified = true;
+      document.getElementById('nav-btn-player').style.display = 'none';
+      document.getElementById('nav-btn-projector').style.display = 'inline-block';
+      document.getElementById('nav-btn-host').style.display = 'inline-block';
+      document.getElementById('nav-btn-ai').style.display = 'inline-block';
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('game-main-header').classList.remove('hidden');
+      switchMainView('projector');
+    }
+
     function handleClientIncomingMessage(data) {
       if (!data || !data.type) return;
 
@@ -749,6 +847,22 @@
         if (joinBtn) {
           joinBtn.disabled = false;
           joinBtn.textContent = '連線並加入房間 →';
+        }
+        return;
+      }
+
+      if (data.type === 'COHOST_ACCEPTED') {
+        lobbyState.roomCode = data.roomCode;
+        lobbyState.maxPlayers = data.maxPlayers;
+        lobbyState.hostName = data.hostName;
+        lobbyState.isHost = true;
+        lobbyState.joinedPlayers = data.lobbyPlayers || [];
+        if (data.status === 'playing' && data.gameState) {
+          applyCoHostGameState(data.gameState);
+        } else {
+          document.getElementById('lobby-step-join').classList.add('hidden');
+          document.getElementById('lobby-step-waiting').classList.remove('hidden');
+          renderWaitingRoom();
         }
         return;
       }
@@ -780,7 +894,11 @@
         } else if (data.status === 'playing' && data.gameState) {
           const isCurrentlyInLobby = !document.getElementById('view-lobby').classList.contains('hidden');
           if (isCurrentlyInLobby) {
-            enterPlayingViewAsParticipant(data.gameState);
+            if (lobbyState.isHost) {
+              applyCoHostGameState(data.gameState);
+            } else {
+              enterPlayingViewAsParticipant(data.gameState);
+            }
             return;
           }
 
@@ -1165,15 +1283,18 @@
       });
 
       peerInstance.on('connection', (conn) => {
-        const session = { conn, uid: null, name: '' };
+        const session = { conn, role: 'participant', uid: null, name: '' };
         hostPeerSessions.push(session);
 
         conn.on('data', (data) => handleHostIncomingMessage(session, data));
 
         const handleDisconnect = () => {
           const boundUid = session.uid;
+          const role = session.role;
           hostPeerSessions = hostPeerSessions.filter(s => s.conn !== conn);
-          if (boundUid) {
+          if (role === 'cohost') {
+            showToast(`👑 主持裝置「${session.name || '副主持'}」已斷線`, 'info');
+          } else if (boundUid) {
             removeParticipantByUid(boundUid, '已斷線離開房間');
           }
         };
@@ -1200,7 +1321,10 @@
         return;
       }
 
-      const codeInput = document.getElementById('join-room-code-input').value.trim().toUpperCase();
+      const rawInput = document.getElementById('join-room-code-input').value.trim().toUpperCase();
+      const isHostModeCode = rawInput.endsWith('-HOST') || rawInput.endsWith('HOST');
+      const codeInput = rawInput.replace(/-?HOST$/i, '').trim();
+
       if (codeInput.length < 4) {
         showToast('請輸入完整的房間代碼！', 'error');
         return;
@@ -1208,11 +1332,13 @@
 
       const btn = document.getElementById('btn-confirm-join');
       btn.disabled = true;
-      btn.textContent = `⏳ 正在連線至房間 [${codeInput}]...`;
+      btn.textContent = isHostModeCode
+        ? `⏳ 正在以主持裝置連線至房間 [${codeInput}]...`
+        : `⏳ 正在連線至房間 [${codeInput}]...`;
 
       cleanupPeerNetwork();
 
-      const pName = document.getElementById('lobby-player-name').value.trim() || '參賽者';
+      const pName = document.getElementById('lobby-player-name').value.trim() || (isHostModeCode ? '主持裝置' : '參賽者');
       const targetPeerId = PEER_PREFIX + codeInput;
 
       peerInstance = new Peer({ debug: 1 });
@@ -1236,17 +1362,25 @@
           btn.textContent = '連線並加入房間 →';
 
           lobbyState.roomCode = codeInput;
-          lobbyState.isHost = false;
+          lobbyState.isHost = isHostModeCode;
 
           try {
             window.history.replaceState({}, '', buildRoomShareUrl(codeInput));
           } catch (e) {}
 
-          conn.send({
-            type: 'JOIN_REQUEST',
-            uid: myPlayerUid,
-            name: pName
-          });
+          if (isHostModeCode) {
+            conn.send({
+              type: 'COHOST_JOIN_REQUEST',
+              uid: myPlayerUid,
+              name: pName
+            });
+          } else {
+            conn.send({
+              type: 'JOIN_REQUEST',
+              uid: myPlayerUid,
+              name: pName
+            });
+          }
         });
 
         conn.on('data', (data) => handleClientIncomingMessage(data));
@@ -1254,9 +1388,6 @@
         conn.on('close', () => {
           if (!document.getElementById('game-main-header').classList.contains('hidden')) {
             simulateDisconnect();
-          } else if (!document.getElementById('lobby-step-waiting').classList.contains('hidden')) {
-            showToast('與主持人的連線已中斷', 'warning');
-            backToLobbySelect();
           }
         });
       });
@@ -1357,7 +1488,6 @@
       backToLobbySelect();
     }
 
-    // Notify host cleanly if participant closes or navigates away from tab
     window.addEventListener('pagehide', () => {
       if (!lobbyState.isHost && clientConnection && clientConnection.open) {
         try {
@@ -1650,6 +1780,7 @@
 
     // ================= AI Engine =================
     function triggerAllAiThinkAndLock(silent = false) {
+      if (sendCoHostAction('AI_LOCK')) return;
       if (isDisconnected || gameState.phase !== 'voting') return;
       let lockedCount = 0;
       gameState.players.forEach(p => {
@@ -1677,6 +1808,7 @@
     }
 
     function runAiCompleteRound() {
+      if (sendCoHostAction('AI_COMPLETE')) return;
       if (isDisconnected) {
         showToast('連線中斷暫停中！', 'warning');
         return;
@@ -1686,17 +1818,26 @@
       }
       gameState.players.forEach(p => {
         if (!p.eliminated && !p.locked) {
-          p.choice = p.choice !== null ? p.choice : Math.floor(15 + Math.random() * 45);
+          p.choice = p.choice !== null ? p.choice : Math.floor(10 + Math.random() * 60);
           p.locked = true;
           p.isLockedByPlayer = true;
         }
       });
-      renderAllViews();
       revealAndCalculateRound();
     }
 
-    // ================= Host Round Controls =================
+    // ================= Host Round Controls (Supports Co-Host Remote Relay) =================
+    function sendCoHostAction(actionName) {
+      if (!lobbyState.isHost) return false;
+      if (peerInstance && !peerInstance.open && clientConnection && clientConnection.open) {
+        clientConnection.send({ type: 'HOST_REMOTE_ACTION', action: actionName });
+        return true;
+      }
+      return false;
+    }
+
     function revealAndCalculateRound() {
+      if (sendCoHostAction('REVEAL')) return;
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法開牌結算！', 'warning');
         return;
@@ -1740,13 +1881,15 @@
     }
 
     function startNextRound() {
+      if (sendCoHostAction('NEXT_ROUND')) return;
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法進入下一回合！', 'warning');
         return;
       }
-      const alive = gameState.players.filter(p => !p.eliminated);
-      if (alive.length <= 1) {
-        showToast(alive.length === 1 ? `🏆 最終勝出者誕生：${alive[0].name}！` : '全員淘汰，遊戲結束！', 'success');
+
+      const alivePlayers = gameState.players.filter(p => !p.eliminated);
+      if (alivePlayers.length <= 1) {
+        showToast('🏆 本局已分出最終勝負！可按「重置全場」開啟新局', 'success');
         return;
       }
 
@@ -1764,12 +1907,13 @@
         p.isLockedByPlayer = false;
       });
 
-      showToast(`進入第 ${gameState.round} 回合！所有存活玩家請重新選號`, 'info');
+      showToast(`➡️ 進入第 ${gameState.round} 回合！`, 'info');
       renderAllViews();
       broadcastStateToAllClients();
     }
 
     function returnToPreviousRound() {
+      if (sendCoHostAction('PREV_ROUND')) return;
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法操作！', 'warning');
         return;
@@ -1800,6 +1944,7 @@
     }
 
     function resetEntireGame() {
+      if (sendCoHostAction('RESET_GAME')) return;
       historyStack = [];
       selectedNumber = null;
       gameState.round = 1;
@@ -1845,13 +1990,49 @@
       scoreEl.textContent = me.score;
       scoreEl.className = `font-number font-black text-2xl ${me.score >= 7 ? 'text-emerald-400' : me.score >= 4 ? 'text-amber-400' : 'text-red-500'}`;
 
-      const dupBadge = document.getElementById('player-rule-dup-badge');
-      const precBadge = document.getElementById('player-rule-prec-badge');
-      if (aliveCount <= cfg.duplicateThreshold) dupBadge.classList.remove('hidden');
-      else dupBadge.classList.add('hidden');
+      const aliveSummaryEl = document.getElementById('player-alive-summary');
+      if (aliveSummaryEl) {
+        aliveSummaryEl.textContent = `目前存活：${aliveCount} / ${gameState.maxPlayers} 人`;
+      }
 
-      if (aliveCount <= cfg.precisionThreshold) precBadge.classList.remove('hidden');
-      else precBadge.classList.add('hidden');
+      const isDupActive = aliveCount <= cfg.duplicateThreshold;
+      const isPrecActive = aliveCount <= cfg.precisionThreshold;
+
+      const dupItem = document.getElementById('player-rule-item-dup');
+      const dupTitle = document.getElementById('player-rule-dup-title');
+      const dupBadge = document.getElementById('player-rule-dup-badge');
+      if (dupTitle) dupTitle.textContent = `2. 同數無效（存活 ≤ ${cfg.duplicateThreshold} 人解鎖）`;
+      if (dupBadge && dupItem) {
+        if (isDupActive) {
+          dupItem.className = 'p-2.5 rounded-xl bg-purple-950/50 border border-purple-500 flex items-start justify-between gap-2 transition';
+          dupTitle.className = 'font-bold text-purple-300';
+          dupBadge.textContent = '生效中';
+          dupBadge.className = 'px-2 py-0.5 rounded-md bg-purple-400 text-black font-black text-[10px] shrink-0';
+        } else {
+          dupItem.className = 'p-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800 flex items-start justify-between gap-2 transition opacity-75';
+          dupTitle.className = 'font-bold text-zinc-400';
+          dupBadge.textContent = '未生效';
+          dupBadge.className = 'px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-500 font-black text-[10px] shrink-0';
+        }
+      }
+
+      const precItem = document.getElementById('player-rule-item-prec');
+      const precTitle = document.getElementById('player-rule-prec-title');
+      const precBadge = document.getElementById('player-rule-prec-badge');
+      if (precTitle) precTitle.textContent = `3. 精準重擊（存活 ≤ ${cfg.precisionThreshold} 人解鎖）`;
+      if (precBadge && precItem) {
+        if (isPrecActive) {
+          precItem.className = 'p-2.5 rounded-xl bg-red-950/50 border border-red-500 flex items-start justify-between gap-2 transition';
+          precTitle.className = 'font-bold text-red-300';
+          precBadge.textContent = '生效中';
+          precBadge.className = 'px-2 py-0.5 rounded-md bg-red-500 text-white font-black text-[10px] shrink-0';
+        } else {
+          precItem.className = 'p-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800 flex items-start justify-between gap-2 transition opacity-75';
+          precTitle.className = 'font-bold text-zinc-400';
+          precBadge.textContent = '未生效';
+          precBadge.className = 'px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-500 font-black text-[10px] shrink-0';
+        }
+      }
 
       const elimBanner = document.getElementById('player-eliminated-banner');
       const padWrapper = document.getElementById('player-numberpad-wrapper');
@@ -1922,25 +2103,25 @@
       const phaseBadge = document.getElementById('proj-phase-badge');
       if (gameState.phase === 'revealed') {
         phaseBadge.textContent = '⚡ 本回合已開牌結算！';
-        phaseBadge.className = 'px-4 py-1.5 rounded-xl bg-red-600/30 border border-red-500 text-red-300 font-black text-sm sm:text-base';
+        phaseBadge.className = 'px-3.5 py-1 rounded bg-red-600/30 border border-red-500 text-red-300 font-black text-xs sm:text-sm';
       } else {
         const lockedCnt = alivePlayers.filter(p => p.locked).length;
         phaseBadge.textContent = `⏳ 選號鎖定進度：${lockedCnt} / ${aliveCount}`;
-        phaseBadge.className = 'px-4 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-sm sm:text-base animate-pulse';
+        phaseBadge.className = 'px-3.5 py-1 rounded bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-xs sm:text-sm animate-pulse';
       }
 
       const dupEl = document.getElementById('proj-rule-dup');
       const precEl = document.getElementById('proj-rule-prec');
-      dupEl.textContent = `🚫 同數無效 (≤${cfg.duplicateThreshold}人)`;
-      precEl.textContent = `⚡ 精準重擊 (≤${cfg.precisionThreshold}人)`;
+      dupEl.textContent = `同數無效 (≤${cfg.duplicateThreshold}人)`;
+      precEl.textContent = `精準重擊 (≤${cfg.precisionThreshold}人)`;
 
       dupEl.className = aliveCount <= cfg.duplicateThreshold
-        ? 'px-3 py-1 rounded-lg bg-purple-950/90 border border-purple-500 text-purple-200 font-black shadow-[0_0_12px_rgba(168,85,247,0.4)]'
-        : 'px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold';
+        ? 'px-2.5 py-1 rounded bg-purple-950/90 border border-purple-500 text-purple-200 font-black'
+        : 'px-2.5 py-1 rounded bg-zinc-900/60 border border-zinc-800 text-zinc-500 font-bold';
 
       precEl.className = aliveCount <= cfg.precisionThreshold
-        ? 'px-3 py-1 rounded-lg bg-red-950/90 border border-red-500 text-red-200 font-black shadow-[0_0_12px_rgba(239,68,68,0.4)]'
-        : 'px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold';
+        ? 'px-2.5 py-1 rounded bg-red-950/90 border border-red-500 text-red-200 font-black'
+        : 'px-2.5 py-1 rounded bg-zinc-900/60 border border-zinc-800 text-zinc-500 font-bold';
 
       if (gameState.phase === 'revealed' && gameState.answer !== null) {
         const outcome = computeRoundOutcome(gameState.players, gameState.maxPlayers);
@@ -1962,7 +2143,7 @@
         9: 'grid-cols-3 sm:grid-cols-5 lg:grid-cols-9',
         10: 'grid-cols-2 sm:grid-cols-5 lg:grid-cols-10'
       }[gameState.maxPlayers] || 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8';
-      grid.className = `grid ${colsClass} gap-3 sm:gap-4 my-auto`;
+      grid.className = `relative z-10 grid ${colsClass} gap-3 sm:gap-5 my-auto py-2`;
 
       grid.innerHTML = gameState.players.map(p => {
         const isWinner = gameState.phase === 'revealed' && gameState.winnerIds.includes(p.id);
@@ -1974,43 +2155,46 @@
             ? 'text-emerald-400'
             : p.score >= 4
               ? 'text-amber-400'
-              : 'text-red-500 animate-pulse';
+              : 'text-red-500';
 
-        let numberBox = '';
+        let numberBoxContent = '';
         if (p.eliminated) {
-          numberBox = `<div class="font-number text-2xl sm:text-3xl font-black text-red-700 tracking-widest">OUT</div>`;
+          numberBoxContent = `<span class="font-number text-xl sm:text-2xl font-black text-red-700 tracking-widest">OUT</span>`;
         } else if (gameState.phase === 'revealed') {
-          numberBox = `
-            <div class="font-number text-3xl sm:text-4xl font-black ${isInvalid ? 'line-through text-zinc-500' : isWinner ? 'text-amber-400' : 'text-white'}">
+          numberBoxContent = `
+            <span class="font-number text-3xl sm:text-5xl font-black ${isInvalid ? 'line-through opacity-50' : ''}">
               ${p.choice !== null ? p.choice : '--'}
-            </div>
-            ${isInvalid ? '<span class="text-[10px] font-bold text-purple-400">同數作廢</span>' : ''}
+            </span>
           `;
         } else {
-          numberBox = p.locked
-            ? `<div class="px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500 text-emerald-400 font-number font-black text-base sm:text-lg">LOCK</div>`
-            : `<div class="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 font-number font-bold text-xs sm:text-sm">思考中</div>`;
+          numberBoxContent = p.locked
+            ? `<span class="font-number text-lg sm:text-xl font-black text-emerald-950 tracking-wider">LOCK</span>`
+            : `<span class="font-number text-sm sm:text-base font-bold text-stone-600">...</span>`;
         }
 
         return `
-          <div class="glass-panel rounded-2xl p-3 sm:p-4 flex flex-col items-center text-center relative transition-all
-            ${p.eliminated ? 'opacity-40 grayscale border-zinc-800 bg-zinc-950' : isWinner ? 'border-2 border-amber-400 winner-glow bg-amber-950/20' : p.locked ? 'border-emerald-600/70' : 'border-zinc-800'}">
+          <div class="flex flex-col items-center relative transition-all
+            ${p.eliminated ? 'opacity-35 grayscale' : ''}">
 
-            ${isWinner ? '<div class="absolute -top-3 px-2.5 py-0.5 rounded-full bg-amber-400 text-black font-black text-[10px] tracking-wider shadow">👑 WINNER</div>' : ''}
-
-            <div class="mb-2">
-              <div class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">LIFE SCORE</div>
-              <div class="font-number text-3xl sm:text-4xl font-black leading-none ${scoreColor}">
-                ${p.score}
+            <div class="w-full max-w-[140px] flex items-end justify-between mb-1 min-h-[28px]">
+              <div>
+                ${isWinner ? '<span class="font-number text-lg sm:text-2xl font-black text-white tracking-tight leading-none">WIN</span>' : ''}
+              </div>
+              <div class="text-right leading-none">
+                <span class="text-[10px] font-bold text-zinc-400 mr-1">分</span>
+                <span class="font-number text-xl sm:text-2xl font-black ${scoreColor}">${p.score}</span>
               </div>
             </div>
 
-            <img src="${p.avatar}" alt="${p.name}" class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 ${p.eliminated ? 'border-zinc-700' : isWinner ? 'border-amber-400' : 'border-zinc-700'} mb-2" />
+            <div class="w-full max-w-[140px] aspect-square p-1 bg-zinc-900 ${isWinner ? 'border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.65)]' : 'border border-zinc-600'} relative">
+              <img src="${p.avatar}" alt="${p.name}" class="w-full h-full object-cover" />
+              ${isInvalid ? '<div class="absolute inset-0 bg-black/75 flex items-center justify-center text-red-400 font-black text-xs">同數作廢</div>' : ''}
+            </div>
 
-            <div class="font-bold text-xs sm:text-sm text-white truncate w-full mb-2">${p.name}</div>
+            <div class="text-xs font-bold text-zinc-300 truncate max-w-[140px] mt-1.5">${p.name}</div>
 
-            <div class="w-full py-2.5 rounded-xl bg-black/60 border border-zinc-800/90 flex flex-col items-center justify-center min-h-[58px]">
-              ${numberBox}
+            <div class="beige-card-box w-full max-w-[140px] h-16 sm:h-20 mt-2 rounded-sm flex items-center justify-center">
+              ${numberBoxContent}
             </div>
           </div>
         `;
@@ -2108,15 +2292,6 @@
 
     // ================= Initialization & URL Room Parameter Check =================
     (function init() {
-      const ruler = document.getElementById('proj-ruler-ticks');
-      if (ruler) {
-        ruler.innerHTML = Array.from({ length: 25 }).map((_, i) => {
-          const isCenter = i === 12;
-          const isMajor = i % 4 === 0;
-          return `<span class="block bg-zinc-400/75 ${isCenter ? 'w-[2px] h-4 bg-white' : isMajor ? 'w-[1.5px] h-3' : 'w-[1px] h-1.5'}"></span>`;
-        }).join('');
-      }
-
       try {
         const params = new URLSearchParams(window.location.search);
         const requestedRoom = (params.get('request_room') || params.get('room') || '').trim().toUpperCase();
