@@ -8,6 +8,8 @@
   <meta name="theme-color" content="#09090b" />
   <title>♦ 天秤審判 — 心理博弈對戰系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PeerJS for Zero-Config Cross-Device WebRTC Multiplayer on GitHub Pages -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     body {
@@ -64,7 +66,6 @@
       animation: pulseGlow 2s infinite;
     }
 
-    /* Custom thin scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #09090b; }
     ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
@@ -83,7 +84,7 @@
     </div>
     <h2 class="text-2xl sm:text-3xl font-black text-red-400 tracking-wider mb-2">連線中斷 · 本回合已暫停</h2>
     <p class="text-zinc-300 text-sm sm:text-base max-w-md mb-6">
-      系統偵測到網路連線中斷，已自動凍結當前選號與倒數狀態。請檢查網路並等待重新連線。
+      系統偵測到連線中斷，已自動凍結當前選號與倒數狀態。請檢查網路並等待重新連線。
     </p>
     <div class="bg-zinc-900 border border-zinc-700 rounded-2xl px-8 py-4 mb-6">
       <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">全員自動返回大廳倒數</div>
@@ -99,7 +100,7 @@
     </div>
   </div>
 
-  <!-- Host Passcode Modal (Fallback if needed) -->
+  <!-- Host Passcode Modal -->
   <div id="password-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="glass-panel rounded-2xl p-6 max-w-sm w-full border border-zinc-700 shadow-2xl">
       <h3 class="text-lg font-bold text-white mb-2">🔒 驗證主持權限</h3>
@@ -133,6 +134,17 @@
 
       <!-- Step 1: Select Role (Join or Create) -->
       <div id="lobby-step-select" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <!-- Auto-detected Room Banner when opened via ?request_room=XXXX -->
+        <div id="url-room-detected-banner" class="hidden mb-5 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/70 flex items-center justify-between gap-3">
+          <div>
+            <div class="text-xs font-bold text-emerald-300">🔗 已透過邀請連結識別房間</div>
+            <div class="text-sm text-white mt-0.5">目標房號：<strong id="url-detected-code" class="font-number text-amber-400 text-lg">----</strong></div>
+          </div>
+          <button onclick="quickJoinDetectedRoom()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shrink-0 transition">
+            直接加入 →
+          </button>
+        </div>
+
         <div class="mb-6">
           <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">你的顯示名稱</label>
           <input id="lobby-player-name" type="text" maxlength="12" placeholder="輸入你的名字或代號..."
@@ -147,7 +159,7 @@
             </div>
             <div>
               <div class="text-lg font-black text-white group-hover:text-emerald-400 transition">加入房間</div>
-              <div class="text-xs text-zinc-400 mt-1">輸入主持人提供的 4 位數房間代碼加入對戰</div>
+              <div class="text-xs text-zinc-400 mt-1">輸入主持人提供的房間代碼或點擊邀請連結加入</div>
             </div>
           </button>
 
@@ -158,17 +170,16 @@
             </div>
             <div>
               <div class="text-lg font-black text-white group-hover:text-amber-400 transition">創建房間 (主持)</div>
-              <div class="text-xs text-zinc-400 mt-1">設定 5–10 人模式、開啟投影大螢幕與後台控場</div>
+              <div class="text-xs text-zinc-400 mt-1">自動生成專屬邀請網址 (?request_room=) 讓不同手機直連</div>
             </div>
           </button>
         </div>
 
-        <div class="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-500">
-          <span id="cloud-status-badge" class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            連線狀態檢測中...
+        <div class="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
+          <span id="p2p-status-badge" class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            免設定 P2P 跨手機直連引擎已就緒（支援 GitHub Pages）
           </span>
-          <span>支援跨手機瀏覽器即時同步</span>
         </div>
       </div>
 
@@ -180,12 +191,12 @@
         </div>
 
         <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">輸入 4 位數房間代碼</label>
-        <input id="join-room-code-input" type="text" maxlength="4" placeholder="例如：8492"
-          class="w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-3xl font-black tracking-[0.4em] text-emerald-400 uppercase mb-6 focus:outline-none" />
+        <input id="join-room-code-input" type="text" maxlength="6" placeholder="例如：8492"
+          class="w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-3xl font-black tracking-[0.35em] text-emerald-400 uppercase mb-6 focus:outline-none" />
 
-        <button onclick="confirmJoinRoom()"
+        <button id="btn-confirm-join" onclick="confirmJoinRoom()"
           class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950/50 transition">
-          確認加入房間 →
+          連線並加入房間 →
         </button>
       </div>
 
@@ -214,9 +225,9 @@
           <div>• 【精準重擊】解鎖條件：存活人數 ≤ <span class="text-red-400 font-bold">3 人</span>（貼近目標者使對手扣 2 分）</div>
         </div>
 
-        <button onclick="confirmCreateRoom()"
+        <button id="btn-confirm-create" onclick="confirmCreateRoom()"
           class="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-base shadow-lg shadow-amber-950/50 transition">
-          生成房間代碼並進入等待室 →
+          建立房間與專屬分享連結 →
         </button>
       </div>
 
@@ -231,11 +242,24 @@
           </button>
         </div>
 
-        <!-- Room Code Display -->
-        <div class="bg-zinc-950 border-2 border-dashed border-amber-500/60 rounded-2xl p-4 text-center mb-6">
-          <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">請參加者輸入此房間代碼</div>
-          <div id="display-room-code" class="font-number text-4xl sm:text-5xl font-black text-amber-400 tracking-[0.35em] select-all">
+        <!-- Room Code & Direct Share Link Display -->
+        <div class="bg-zinc-950 border-2 border-dashed border-amber-500/60 rounded-2xl p-4 text-center mb-5">
+          <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">房間代碼 (Room Code)</div>
+          <div id="display-room-code" class="font-number text-4xl sm:text-5xl font-black text-amber-400 tracking-[0.35em] select-all mb-3">
             ----
+          </div>
+
+          <!-- Shareable URL Bar (?request_room=XXXX) -->
+          <div id="host-share-link-box" class="pt-3 border-t border-zinc-800/90 flex flex-col gap-2">
+            <div class="text-[11px] text-emerald-400 font-bold">🔗 專屬邀請網址（參加者打開即可自動識別房號加入）：</div>
+            <div class="flex items-center gap-2">
+              <input id="shareable-room-url-input" type="text" readonly
+                class="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 text-xs font-number text-zinc-300 select-all focus:outline-none" />
+              <button type="button" onclick="copyRoomInviteLink()"
+                class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs shrink-0 transition">
+                📋 複製連結
+              </button>
+            </div>
           </div>
         </div>
 
@@ -311,7 +335,7 @@
     <div class="glass-panel rounded-2xl p-4 mb-3 border border-zinc-800">
       <div class="flex items-center justify-between gap-3 mb-3">
         <div class="flex items-center gap-2.5 flex-1 min-w-0">
-          <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 font-number font-bold text-white text-xs shrink-0">P1</span>
+          <span id="player-seat-badge" class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 font-number font-bold text-white text-xs shrink-0">P1</span>
           <input id="player-name-input" type="text" maxlength="12" onchange="updatePlayerName(this.value)"
             class="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1 text-sm font-bold text-white w-full max-w-[160px] focus:outline-none focus:border-amber-500" />
         </div>
@@ -492,7 +516,7 @@
       </div>
     </div>
 
-    <!-- Large Pre-Reveal Winner Prediction Banner (Placed prominently below) -->
+    <!-- Large Pre-Reveal Winner Prediction Banner -->
     <div id="host-winner-preview-box" class="rounded-3xl p-6 bg-gradient-to-r from-amber-950/90 via-zinc-900 to-amber-950/90 border-2 border-amber-500/70 shadow-2xl">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
@@ -513,7 +537,7 @@
       </div>
     </div>
 
-    <!-- Bottom Utility Bar: Return to Previous Round & Reset Game (Placed at very bottom) -->
+    <!-- Bottom Utility Bar: Return to Previous Round & Reset Game -->
     <div class="mt-auto pt-4 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3">
       <button onclick="simulateDisconnect()"
         class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-bold border border-zinc-700 transition">
@@ -558,113 +582,142 @@
   </main>
 
   <!-- ================= Core JavaScript Engine ================= -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  <script>
+    // ================= Zero-Config P2P Multi-Device Sync (PeerJS) =================
+    const PEER_PREFIX = 'scale-judge-room-';
+    let peerInstance = null;
+    let hostConnections = []; // Host holds connections to all joined clients
+    let clientConnection = null; // Participant holds connection to Host
+    let myPlayerUid = 'player_' + Math.random().toString(36).slice(2, 10);
 
-    // ================= Cloud Realtime Sync Setup =================
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'king-of-diamonds-scale';
-    let db = null;
-    let auth = null;
-    let currentUser = null;
-    let myPlayerUid = null;
-    let roomUnsubscribe = null;
-    let isCloudReady = false;
-
-    async function initCloudSync() {
-      const badge = document.getElementById('cloud-status-badge');
+    function cleanupPeerNetwork() {
       try {
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-          const firebaseConfig = JSON.parse(__firebase_config);
-          const app = initializeApp(firebaseConfig);
-          db = getFirestore(app);
-          auth = getAuth(app);
+        hostConnections.forEach(c => { try { c.close(); } catch (e) {} });
+        hostConnections = [];
+        if (clientConnection) {
+          try { clientConnection.close(); } catch (e) {}
+          clientConnection = null;
+        }
+        if (peerInstance) {
+          try { peerInstance.destroy(); } catch (e) {}
+          peerInstance = null;
+        }
+      } catch (e) {}
+    }
 
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } else {
-            await signInAnonymously(auth);
-          }
-          currentUser = auth.currentUser;
-          myPlayerUid = currentUser ? currentUser.uid : ('user_' + Math.random().toString(36).slice(2, 10));
-          isCloudReady = true;
-          if (badge) {
-            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> 雲端即時多人連線已就緒`;
+    // Host broadcasts current waiting room or live game state to all connected phones
+    function broadcastStateToAllClients(statusOverride = null) {
+      if (!lobbyState.isHost) return;
+      const isPlaying = statusOverride ? statusOverride === 'playing' : document.getElementById('view-lobby').classList.contains('hidden');
+      const payload = {
+        type: 'SYNC_STATE',
+        status: statusOverride || (isPlaying ? 'playing' : 'waiting'),
+        roomCode: lobbyState.roomCode,
+        maxPlayers: lobbyState.maxPlayers,
+        hostName: lobbyState.hostName,
+        lobbyPlayers: lobbyState.joinedPlayers,
+        gameState: {
+          roomCode: gameState.roomCode,
+          maxPlayers: gameState.maxPlayers,
+          round: gameState.round,
+          phase: gameState.phase,
+          answer: gameState.answer,
+          winnerIds: gameState.winnerIds,
+          invalidNumbers: gameState.invalidNumbers,
+          roundNotice: gameState.roundNotice,
+          players: gameState.players
+        }
+      };
+
+      hostConnections = hostConnections.filter(conn => conn && conn.open);
+      hostConnections.forEach(conn => {
+        try {
+          conn.send(payload);
+        } catch (err) {
+          console.error('Broadcast to client failed:', err);
+        }
+      });
+    }
+
+    // Host processes messages sent by participant phones
+    function handleHostIncomingMessage(conn, data) {
+      if (!data || !data.type) return;
+
+      if (data.type === 'JOIN_REQUEST') {
+        const isPlaying = document.getElementById('view-lobby').classList.contains('hidden');
+        const existingIdx = lobbyState.joinedPlayers.findIndex(p => p.uid === data.uid);
+
+        if (existingIdx !== -1) {
+          lobbyState.joinedPlayers[existingIdx].name = data.name || lobbyState.joinedPlayers[existingIdx].name;
+          if (gameState.players[existingIdx]) {
+            gameState.players[existingIdx].name = lobbyState.joinedPlayers[existingIdx].name;
           }
         } else {
-          myPlayerUid = 'local_' + Math.random().toString(36).slice(2, 10);
-          if (badge) {
-            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> 單機 / 同瀏覽器模式已就緒`;
+          if (isPlaying || lobbyState.joinedPlayers.length >= lobbyState.maxPlayers) {
+            conn.send({
+              type: 'JOIN_REJECTED',
+              reason: isPlaying ? '遊戲已經開始，無法中途加入！' : '房間人數已滿！'
+            });
+            return;
           }
+          lobbyState.joinedPlayers.push({
+            uid: data.uid,
+            name: data.name || `玩家${lobbyState.joinedPlayers.length + 1}`,
+            isAi: false,
+            isHost: false
+          });
+          showToast(`📱 ${data.name} 已加入房間！`, 'success');
         }
-      } catch (err) {
-        console.error('Cloud init error:', err);
-        myPlayerUid = 'local_' + Math.random().toString(36).slice(2, 10);
-        if (badge) {
-          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> 離線單機模式已就緒`;
-        }
-      }
-    }
 
-    function getRoomDocRef(code) {
-      return doc(db, 'artifacts', appId, 'public', 'data', 'scale_rooms', code);
-    }
-
-    async function syncFullRoomStateToCloud() {
-      if (!isCloudReady || !db || !currentUser || !lobbyState.roomCode) return;
-      try {
-        const roomRef = getRoomDocRef(lobbyState.roomCode);
-        await setDoc(roomRef, {
-          roomCode: lobbyState.roomCode,
-          maxPlayers: lobbyState.maxPlayers,
-          hostUid: lobbyState.isHost ? myPlayerUid : (gameState.hostUid || ''),
-          hostName: lobbyState.hostName || '',
-          status: document.getElementById('view-lobby').classList.contains('hidden') ? 'playing' : 'waiting',
-          lobbyPlayers: lobbyState.joinedPlayers,
-          gameState: {
-            roomCode: gameState.roomCode,
-            maxPlayers: gameState.maxPlayers,
-            round: gameState.round,
-            phase: gameState.phase,
-            answer: gameState.answer,
-            winnerIds: gameState.winnerIds,
-            invalidNumbers: gameState.invalidNumbers,
-            roundNotice: gameState.roundNotice,
-            players: gameState.players
-          },
-          updatedAt: Date.now()
-        }, { merge: true });
-      } catch (e) {
-        console.error('Sync room error:', e);
-      }
-    }
-
-    function subscribeToRoom(code) {
-      if (!isCloudReady || !db || !currentUser) return;
-      if (roomUnsubscribe) {
-        roomUnsubscribe();
-        roomUnsubscribe = null;
-      }
-
-      const roomRef = getRoomDocRef(code);
-      roomUnsubscribe = onSnapshot(roomRef, (snap) => {
-        if (!snap.exists()) {
-          if (!lobbyState.isHost) {
-            showToast('房間已被主持關閉或不存在', 'warning');
-            returnToLobby();
+        renderWaitingRoom();
+        broadcastStateToAllClients();
+      } else if (data.type === 'PLAYER_ACTION') {
+        const target = gameState.players.find(p => p.uid === data.uid);
+        if (target) {
+          const wasLocked = target.locked;
+          if (typeof data.name === 'string' && data.name.trim()) {
+            target.name = data.name.trim();
           }
-          return;
+          if (gameState.phase === 'voting' && !target.eliminated) {
+            target.choice = data.choice;
+            target.locked = Boolean(data.locked);
+            target.isLockedByPlayer = Boolean(data.isLockedByPlayer);
+            if (!wasLocked && target.locked) {
+              playProjectorLockSound();
+            }
+          }
+          renderAllViews();
+          broadcastStateToAllClients();
         }
+      } else if (data.type === 'LEAVE_LOBBY') {
+        const isPlaying = document.getElementById('view-lobby').classList.contains('hidden');
+        if (!isPlaying) {
+          lobbyState.joinedPlayers = lobbyState.joinedPlayers.filter(p => p.uid !== data.uid);
+          renderWaitingRoom();
+          broadcastStateToAllClients();
+        }
+      }
+    }
 
-        const data = snap.data();
+    // Participant processes state updates received from Host
+    function handleClientIncomingMessage(data) {
+      if (!data || !data.type) return;
 
-        // 若房間因超時或主持操作重置回大廳
+      if (data.type === 'JOIN_REJECTED') {
+        showToast(data.reason || '無法加入房間', 'error');
+        cleanupPeerNetwork();
+        const joinBtn = document.getElementById('btn-confirm-join');
+        if (joinBtn) {
+          joinBtn.disabled = false;
+          joinBtn.textContent = '連線並加入房間 →';
+        }
+        return;
+      }
+
+      if (data.type === 'SYNC_STATE') {
         if (data.status === 'closed') {
-          if (roomUnsubscribe) {
-            roomUnsubscribe();
-            roomUnsubscribe = null;
-          }
+          showToast('主持人已關閉房間，全員返回大廳', 'warning');
+          cleanupPeerNetwork();
           clearDisconnectState();
           document.getElementById('game-main-header').classList.add('hidden');
           ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
@@ -672,62 +725,39 @@
           });
           document.getElementById('view-lobby').classList.remove('hidden');
           backToLobbySelect();
-          showToast('房間已結束並全員返回大廳', 'info');
           return;
         }
 
-        // 同步大廳等待室名單
-        if (data.lobbyPlayers) {
-          lobbyState.joinedPlayers = data.lobbyPlayers;
-          lobbyState.maxPlayers = data.maxPlayers || lobbyState.maxPlayers;
-          lobbyState.hostName = data.hostName || lobbyState.hostName;
-          if (!document.getElementById('lobby-step-waiting').classList.contains('hidden')) {
-            renderWaitingRoom();
-          }
-        }
+        lobbyState.roomCode = data.roomCode;
+        lobbyState.maxPlayers = data.maxPlayers;
+        lobbyState.hostName = data.hostName;
+        lobbyState.joinedPlayers = data.lobbyPlayers || [];
 
-        // 當主持按下「正式開始遊戲」時，所有在等待室的參加者手機自動進入遊戲介面
-        if (data.status === 'playing' && !document.getElementById('view-lobby').classList.contains('hidden')) {
-          if (!lobbyState.isHost && data.gameState) {
+        if (data.status === 'waiting') {
+          document.getElementById('lobby-step-select').classList.add('hidden');
+          document.getElementById('lobby-step-join').classList.add('hidden');
+          document.getElementById('lobby-step-waiting').classList.remove('hidden');
+          renderWaitingRoom();
+        } else if (data.status === 'playing' && data.gameState) {
+          const isCurrentlyInLobby = !document.getElementById('view-lobby').classList.contains('hidden');
+          if (isCurrentlyInLobby) {
             enterPlayingViewAsParticipant(data.gameState);
+            return;
           }
-        }
 
-        // 遊戲進行中的即時資料同步
-        if (data.status === 'playing' && data.gameState) {
-          const remote = data.gameState;
-          const prevPhase = gameState.phase;
           const prevRound = gameState.round;
-          const prevPlayers = gameState.players || [];
-
-          // 檢查是否有新玩家剛鎖定答案（僅在主持人端／投影畫面播放鎖定音效）
-          if (remote.players && prevPlayers.length === remote.players.length) {
-            const newlyLocked = remote.players.some((rp, idx) => rp.locked && !prevPlayers[idx]?.locked);
-            if (newlyLocked && lobbyState.isHost) {
-              playProjectorLockSound();
-            }
-          }
-
-          // 若開牌結算，播放開牌音效
-          if (prevPhase === 'voting' && remote.phase === 'revealed') {
-            playRevealSound();
-          }
-
-          // 若進入下一回合或返回上一回合，重設本地暫選數字
-          if (prevRound !== remote.round || (prevPhase === 'revealed' && remote.phase === 'voting')) {
+          const prevPhase = gameState.phase;
+          if (prevRound !== data.gameState.round || (prevPhase === 'revealed' && data.gameState.phase === 'voting')) {
             selectedNumber = null;
           }
 
           gameState = {
             ...gameState,
-            ...remote
+            ...data.gameState
           };
-
           renderAllViews();
         }
-      }, (error) => {
-        console.error('Room snapshot error:', error);
-      });
+      }
     }
 
     // ================= Mode Configurations =================
@@ -749,14 +779,12 @@
       joinedPlayers: []
     };
 
-    let createdRoomsRegistry = {};
-
     let gameState = {
       roomCode: '8888',
       hostUid: '',
       maxPlayers: 8,
       round: 1,
-      phase: 'voting', // 'voting' | 'revealed'
+      phase: 'voting',
       answer: null,
       winnerIds: [],
       invalidNumbers: [],
@@ -791,7 +819,6 @@
       }
     }
 
-    // 投影畫面／主持端鎖定提示音效（參加者按數字不會有聲音，直到鎖定才在投影端發出）
     function playProjectorLockSound() {
       try {
         ensureAudioCtx();
@@ -800,8 +827,8 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.12); // G5
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.12);
         gain.gain.setValueAtTime(0.22, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(gain);
@@ -893,6 +920,26 @@
       return code;
     }
 
+    function buildRoomShareUrl(code) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('room');
+      url.searchParams.set('request_room', code);
+      return url.toString();
+    }
+
+    function copyRoomInviteLink() {
+      const input = document.getElementById('shareable-room-url-input');
+      if (!input || !input.value) return;
+      input.select();
+      input.setSelectionRange(0, 99999);
+      try {
+        navigator.clipboard.writeText(input.value);
+      } catch (e) {
+        document.execCommand('copy');
+      }
+      showToast('🔗 已複製專屬邀請連結！貼給參加者打開即可自動識別房號', 'success');
+    }
+
     function createDefaultAvatar(index, label) {
       const palettes = ['#dc2626', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#4f46e5', '#ea580c', '#16a34a'];
       const bg = palettes[(index - 1) % palettes.length];
@@ -914,7 +961,6 @@
       const duplicateRuleActive = aliveCount <= cfg.duplicateThreshold;
       const precisionRuleActive = aliveCount <= cfg.precisionThreshold;
 
-      // 統計每個數字出現次數
       const freqMap = {};
       alivePlayers.forEach(p => {
         if (p.choice !== null && p.choice !== undefined) {
@@ -931,10 +977,8 @@
         });
       }
 
-      // 篩選有效出牌玩家
       const validPlayers = alivePlayers.filter(p => p.choice !== null && !invalidNumbers.includes(p.choice));
 
-      // 若全部人皆因「同數無效」作廢
       if (validPlayers.length === 0) {
         return {
           avg: 0,
@@ -950,7 +994,6 @@
       const avg = sum / validPlayers.length;
       const answer = Number((avg * 0.8).toFixed(2));
 
-      // 找出距離 answer 最近的玩家
       let minDiff = Infinity;
       validPlayers.forEach(p => {
         const diff = Math.abs(Number(p.choice) - answer);
@@ -963,7 +1006,6 @@
         .filter(p => Math.abs(Math.abs(Number(p.choice) - answer) - minDiff) <= 0.0001)
         .map(p => p.id);
 
-      // 精準重擊判定：存活人數達標且勝出者與目標值誤差 <= 1.0
       let penalty = 1;
       let precisionTriggered = false;
       if (precisionRuleActive && minDiff <= 1.0) {
@@ -994,7 +1036,16 @@
     function showJoinRoomForm() {
       document.getElementById('lobby-step-select').classList.add('hidden');
       document.getElementById('lobby-step-join').classList.remove('hidden');
-      document.getElementById('join-room-code-input').focus();
+      const input = document.getElementById('join-room-code-input');
+      input.focus();
+    }
+
+    function quickJoinDetectedRoom() {
+      const code = document.getElementById('url-detected-code').textContent.trim();
+      if (code && code !== '----') {
+        document.getElementById('join-room-code-input').value = code;
+        confirmJoinRoom();
+      }
     }
 
     function showCreateRoomForm() {
@@ -1033,133 +1084,144 @@
       }
     }
 
-    async function confirmCreateRoom() {
+    function confirmCreateRoom() {
+      if (typeof Peer === 'undefined') {
+        showToast('連線模組載入中，請稍候 1 秒再試！', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btn-confirm-create');
+      btn.disabled = true;
+      btn.textContent = '⏳ 正在建立跨裝置房間節點...';
+
+      cleanupPeerNetwork();
+
       const pName = document.getElementById('lobby-player-name').value.trim() || '主持人';
       const code = generateRoomCode();
-      lobbyState.roomCode = code;
-      lobbyState.isHost = true;
-      lobbyState.hostName = pName;
-      lobbyState.joinedPlayers = [];
+      const peerId = PEER_PREFIX + code;
 
-      createdRoomsRegistry[code] = {
-        maxPlayers: lobbyState.maxPlayers,
-        hostName: pName,
-        createdAt: Date.now()
-      };
-      try {
-        const stored = JSON.parse(sessionStorage.getItem('king_of_diamonds_rooms') || '{}');
-        stored[code] = createdRoomsRegistry[code];
-        sessionStorage.setItem('king_of_diamonds_rooms', JSON.stringify(stored));
-      } catch (e) {}
+      peerInstance = new Peer(peerId, { debug: 1 });
 
-      if (isCloudReady && db && currentUser) {
+      peerInstance.on('open', () => {
+        btn.disabled = false;
+        btn.textContent = '建立房間與專屬分享連結 →';
+
+        lobbyState.roomCode = code;
+        lobbyState.isHost = true;
+        lobbyState.hostName = pName;
+        lobbyState.joinedPlayers = [];
+
+        // Update browser URL cleanly with ?request_room=CODE so host can also copy address bar directly
         try {
-          await setDoc(getRoomDocRef(code), {
-            roomCode: code,
-            maxPlayers: lobbyState.maxPlayers,
-            hostUid: myPlayerUid,
-            hostName: pName,
-            status: 'waiting',
-            lobbyPlayers: [],
-            gameState: null,
-            createdAt: Date.now()
-          });
-          subscribeToRoom(code);
-        } catch (err) {
-          console.error('Create cloud room failed:', err);
-        }
-      }
+          const shareUrl = buildRoomShareUrl(code);
+          window.history.replaceState({}, '', shareUrl);
+          const linkInput = document.getElementById('shareable-room-url-input');
+          if (linkInput) linkInput.value = shareUrl;
+        } catch (e) {}
 
-      document.getElementById('lobby-step-create').classList.add('hidden');
-      document.getElementById('lobby-step-waiting').classList.remove('hidden');
-      renderWaitingRoom();
-      showToast(`已創建 ${lobbyState.maxPlayers} 人房間！代碼：${code}`, 'success');
+        document.getElementById('lobby-step-create').classList.add('hidden');
+        document.getElementById('lobby-step-waiting').classList.remove('hidden');
+        renderWaitingRoom();
+        showToast(`✅ 房間 [${code}] 已上線！複製連結即可讓其他手機加入`, 'success');
+      });
+
+      peerInstance.on('connection', (conn) => {
+        hostConnections.push(conn);
+        conn.on('data', (data) => handleHostIncomingMessage(conn, data));
+        conn.on('close', () => {
+          hostConnections = hostConnections.filter(c => c !== conn);
+        });
+      });
+
+      peerInstance.on('error', (err) => {
+        btn.disabled = false;
+        btn.textContent = '建立房間與專屬分享連結 →';
+        console.error('Host Peer error:', err);
+        if (err.type === 'unavailable-id') {
+          confirmCreateRoom(); // Retry with a fresh random code
+        } else {
+          showToast('建立連線節點失敗，請檢查網路後重試！', 'error');
+        }
+      });
     }
 
-    async function confirmJoinRoom() {
-      const codeInput = document.getElementById('join-room-code-input').value.trim().toUpperCase();
-      if (codeInput.length !== 4) {
-        showToast('請輸入完整的 4 位數房間代碼！', 'error');
+    function confirmJoinRoom() {
+      if (typeof Peer === 'undefined') {
+        showToast('連線模組載入中，請稍候 1 秒再試！', 'warning');
         return;
       }
+
+      const codeInput = document.getElementById('join-room-code-input').value.trim().toUpperCase();
+      if (codeInput.length < 4) {
+        showToast('請輸入完整的房間代碼！', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-confirm-join');
+      btn.disabled = true;
+      btn.textContent = `⏳ 正在連線至房間 [${codeInput}]...`;
+
+      cleanupPeerNetwork();
 
       const pName = document.getElementById('lobby-player-name').value.trim() || '參賽者';
-      let validRoom = null;
+      const targetPeerId = PEER_PREFIX + codeInput;
 
-      if (isCloudReady && db && currentUser) {
-        try {
-          const roomRef = getRoomDocRef(codeInput);
-          const snap = await getDoc(roomRef);
-          if (snap.exists()) {
-            const data = snap.data();
-            if (data.status === 'closed') {
-              showToast(`房間 [${codeInput}] 已經關閉！`, 'error');
-              return;
-            }
-            validRoom = data;
+      peerInstance = new Peer({ debug: 1 });
 
-            const currentList = Array.isArray(data.lobbyPlayers) ? [...data.lobbyPlayers] : [];
-            const existingIdx = currentList.findIndex(p => p.uid === myPlayerUid);
-
-            if (existingIdx === -1) {
-              if (currentList.length >= (data.maxPlayers || 8)) {
-                showToast(`房間 [${codeInput}] 人數已滿！`, 'error');
-                return;
-              }
-              currentList.push({ uid: myPlayerUid, name: pName, isAi: false, isHost: false });
-            } else {
-              currentList[existingIdx].name = pName;
-            }
-
-            await updateDoc(roomRef, { lobbyPlayers: currentList });
-            lobbyState.joinedPlayers = currentList;
-          }
-        } catch (err) {
-          console.error('Cloud room lookup error:', err);
+      const connectTimeout = setTimeout(() => {
+        if (!clientConnection || !clientConnection.open) {
+          btn.disabled = false;
+          btn.textContent = '連線並加入房間 →';
+          showToast(`找不到房間 [${codeInput}] 或主持人尚未開房！`, 'error');
+          cleanupPeerNetwork();
         }
-      }
+      }, 9000);
 
-      if (!validRoom) {
-        validRoom = createdRoomsRegistry[codeInput];
-        if (!validRoom) {
+      peerInstance.on('open', () => {
+        const conn = peerInstance.connect(targetPeerId, { reliable: true });
+        clientConnection = conn;
+
+        conn.on('open', () => {
+          clearTimeout(connectTimeout);
+          btn.disabled = false;
+          btn.textContent = '連線並加入房間 →';
+
+          lobbyState.roomCode = codeInput;
+          lobbyState.isHost = false;
+
           try {
-            const stored = JSON.parse(sessionStorage.getItem('king_of_diamonds_rooms') || '{}');
-            validRoom = stored[codeInput];
+            window.history.replaceState({}, '', buildRoomShareUrl(codeInput));
           } catch (e) {}
-        }
-        if (validRoom) {
-          lobbyState.joinedPlayers = [
-            { uid: myPlayerUid, name: pName, isAi: false, isHost: false }
-          ];
-        }
-      }
 
-      if (!validRoom) {
-        showToast(`找不到房間代碼 [${codeInput}]！請確認主持已創建房間。`, 'error');
-        return;
-      }
+          conn.send({
+            type: 'JOIN_REQUEST',
+            uid: myPlayerUid,
+            name: pName
+          });
+        });
 
-      lobbyState.roomCode = codeInput;
-      lobbyState.maxPlayers = validRoom.maxPlayers || 8;
-      lobbyState.hostName = validRoom.hostName || '主持人';
-      lobbyState.isHost = false;
+        conn.on('data', (data) => handleClientIncomingMessage(data));
 
-      if (isCloudReady && db && currentUser) {
-        subscribeToRoom(codeInput);
-      }
+        conn.on('close', () => {
+          if (!document.getElementById('game-main-header').classList.contains('hidden')) {
+            simulateDisconnect();
+          } else if (!document.getElementById('lobby-step-waiting').classList.contains('hidden')) {
+            showToast('與主持人的連線已中斷', 'warning');
+            backToLobbySelect();
+          }
+        });
+      });
 
-      if (validRoom.status === 'playing' && validRoom.gameState) {
-        enterPlayingViewAsParticipant(validRoom.gameState);
-        return;
-      }
-
-      document.getElementById('lobby-step-join').classList.add('hidden');
-      document.getElementById('lobby-step-waiting').classList.remove('hidden');
-      renderWaitingRoom();
-      showToast(`已成功加入房間 [${codeInput}]！`, 'success');
+      peerInstance.on('error', (err) => {
+        clearTimeout(connectTimeout);
+        btn.disabled = false;
+        btn.textContent = '連線並加入房間 →';
+        console.error('Client Peer error:', err);
+        showToast(`無法連接至房間 [${codeInput}]，請確認代碼是否正確！`, 'error');
+      });
     }
 
-    async function fillRemainingWithAi() {
+    function fillRemainingWithAi() {
       const needed = lobbyState.maxPlayers - lobbyState.joinedPlayers.length;
       if (needed <= 0) {
         showToast('房間人數已滿！', 'info');
@@ -1172,9 +1234,7 @@
         lobbyState.joinedPlayers.push({ uid: 'ai_' + idx + '_' + Date.now(), name: aiLabel, isAi: true, isHost: false });
       }
       renderWaitingRoom();
-      if (isCloudReady && db && currentUser && lobbyState.roomCode) {
-        await updateDoc(getRoomDocRef(lobbyState.roomCode), { lobbyPlayers: lobbyState.joinedPlayers });
-      }
+      broadcastStateToAllClients();
     }
 
     function renderWaitingRoom() {
@@ -1182,6 +1242,15 @@
       document.getElementById('waiting-mode-label').textContent = lobbyState.maxPlayers;
       document.getElementById('waiting-joined-count').textContent = lobbyState.joinedPlayers.length;
       document.getElementById('waiting-total-count').textContent = lobbyState.maxPlayers;
+
+      const shareBox = document.getElementById('host-share-link-box');
+      if (shareBox) {
+        shareBox.style.display = lobbyState.isHost ? 'flex' : 'none';
+        const linkInput = document.getElementById('shareable-room-url-input');
+        if (linkInput && lobbyState.roomCode) {
+          linkInput.value = buildRoomShareUrl(lobbyState.roomCode);
+        }
+      }
 
       const aiFillBtn = document.getElementById('btn-fill-ai-lobby');
       if (aiFillBtn) {
@@ -1225,21 +1294,15 @@
       }
     }
 
-    async function leaveLobbyRoom() {
-      if (isCloudReady && db && currentUser && lobbyState.roomCode) {
+    function leaveLobbyRoom() {
+      if (lobbyState.isHost) {
+        broadcastStateToAllClients('closed');
+      } else if (clientConnection && clientConnection.open) {
         try {
-          if (lobbyState.isHost) {
-            await updateDoc(getRoomDocRef(lobbyState.roomCode), { status: 'closed' });
-          } else {
-            const filtered = lobbyState.joinedPlayers.filter(p => p.uid !== myPlayerUid);
-            await updateDoc(getRoomDocRef(lobbyState.roomCode), { lobbyPlayers: filtered });
-          }
+          clientConnection.send({ type: 'LEAVE_LOBBY', uid: myPlayerUid });
         } catch (e) {}
       }
-      if (roomUnsubscribe) {
-        roomUnsubscribe();
-        roomUnsubscribe = null;
-      }
+      cleanupPeerNetwork();
       lobbyState.joinedPlayers = [];
       lobbyState.roomCode = '';
       backToLobbySelect();
@@ -1273,7 +1336,7 @@
       showToast(`遊戲開始！已進入房間 [${gameState.roomCode}]`, 'success');
     }
 
-    async function startGameFromLobby() {
+    function startGameFromLobby() {
       if (lobbyState.isHost && lobbyState.joinedPlayers.length < lobbyState.maxPlayers) {
         showToast('人數尚未齊全！', 'error');
         return;
@@ -1316,24 +1379,17 @@
       document.getElementById('view-lobby').classList.add('hidden');
       document.getElementById('game-main-header').classList.remove('hidden');
 
-      await syncFullRoomStateToCloud();
+      broadcastStateToAllClients('playing');
 
       switchMainView('host');
       showToast(`主持模式已啟動！所有參加者手機已同步進入遊戲`, 'success');
     }
 
-    async function returnToLobby() {
-      if (isCloudReady && db && currentUser && lobbyState.roomCode) {
-        try {
-          if (lobbyState.isHost) {
-            await updateDoc(getRoomDocRef(lobbyState.roomCode), { status: 'closed' });
-          }
-        } catch (e) {}
+    function returnToLobby() {
+      if (lobbyState.isHost) {
+        broadcastStateToAllClients('closed');
       }
-      if (roomUnsubscribe) {
-        roomUnsubscribe();
-        roomUnsubscribe = null;
-      }
+      cleanupPeerNetwork();
       clearDisconnectState();
       document.getElementById('game-main-header').classList.add('hidden');
       ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
@@ -1395,7 +1451,7 @@
     function simulateDisconnect() {
       if (isDisconnected) return;
       isDisconnected = true;
-      disconnectSecondsLeft = 600; // 10 minutes = 600 seconds
+      disconnectSecondsLeft = 600;
       document.getElementById('disconnect-overlay').classList.remove('hidden');
       updateDisconnectTimerDisplay();
 
@@ -1429,14 +1485,17 @@
 
     function manualReconnect() {
       clearDisconnectState();
+      if (!lobbyState.isHost && lobbyState.roomCode && (!clientConnection || !clientConnection.open)) {
+        confirmJoinRoom();
+      }
       showToast('✅ 已重新連線，繼續當前回合！', 'success');
       renderAllViews();
     }
 
-    async function forceTimeoutToLobby() {
+    function forceTimeoutToLobby() {
       clearDisconnectState();
       showToast('⏱️ 斷線超過 10 分鐘，全員自動返回大廳！', 'warning');
-      await returnToLobby();
+      returnToLobby();
     }
 
     window.addEventListener('offline', () => {
@@ -1458,39 +1517,35 @@
       return found || gameState.players[0];
     }
 
-    async function updatePlayerName(newName) {
+    function sendPlayerActionToHost(playerObj) {
+      if (lobbyState.isHost) {
+        broadcastStateToAllClients();
+        return;
+      }
+      if (clientConnection && clientConnection.open) {
+        try {
+          clientConnection.send({
+            type: 'PLAYER_ACTION',
+            uid: myPlayerUid,
+            name: playerObj.name,
+            choice: playerObj.choice,
+            locked: playerObj.locked,
+            isLockedByPlayer: playerObj.isLockedByPlayer
+          });
+        } catch (e) {
+          console.error('Send player action failed:', e);
+        }
+      }
+    }
+
+    function updatePlayerName(newName) {
       const me = getMyPlayerObject();
       if (!me) return;
       me.name = newName.trim() || '參賽者';
       renderAllViews();
-      await syncPlayerChoiceToCloud(me);
+      sendPlayerActionToHost(me);
     }
 
-    async function syncPlayerChoiceToCloud(playerObj) {
-      if (!isCloudReady || !db || !currentUser || !gameState.roomCode) return;
-      try {
-        const roomRef = getRoomDocRef(gameState.roomCode);
-        const snap = await getDoc(roomRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data.gameState && Array.isArray(data.gameState.players)) {
-            const updatedPlayers = data.gameState.players.map(p =>
-              p.id === playerObj.id
-                ? { ...p, name: playerObj.name, choice: playerObj.choice, locked: playerObj.locked, isLockedByPlayer: playerObj.isLockedByPlayer }
-                : p
-            );
-            await updateDoc(roomRef, {
-              'gameState.players': updatedPlayers,
-              updatedAt: Date.now()
-            });
-          }
-        }
-      } catch (e) {
-        console.error('Sync player choice error:', e);
-      }
-    }
-
-    // 參加者點擊數字：無任何音效，僅選取預覽
     function selectNumber(num) {
       if (isDisconnected) return;
       const me = getMyPlayerObject();
@@ -1502,7 +1557,7 @@
       renderAllViews();
     }
 
-    async function lockPlayerAnswer() {
+    function lockPlayerAnswer() {
       if (isDisconnected) {
         showToast('連線中斷暫停中，請等待重新連線！', 'warning');
         return;
@@ -1522,18 +1577,17 @@
       me.locked = true;
       me.isLockedByPlayer = true;
 
-      // 若是單機同頁面測試且當前在投影畫面則播放鎖定音效
       if (lobbyState.isHost) {
         playProjectorLockSound();
       }
       showToast(`已鎖定數字 [${me.choice}]！`, 'success');
       renderAllViews();
 
-      await syncPlayerChoiceToCloud(me);
+      sendPlayerActionToHost(me);
     }
 
     // ================= AI Engine =================
-    async function triggerAllAiThinkAndLock(silent = false) {
+    function triggerAllAiThinkAndLock(silent = false) {
       if (isDisconnected || gameState.phase !== 'voting') return;
       let lockedCount = 0;
       gameState.players.forEach(p => {
@@ -1555,18 +1609,18 @@
       if (lockedCount > 0) {
         playProjectorLockSound();
         if (!silent) showToast(`已讓 ${lockedCount} 位 AI 完成出牌鎖定！`, 'info');
-        await syncFullRoomStateToCloud();
+        broadcastStateToAllClients();
       }
       renderAllViews();
     }
 
-    async function runAiCompleteRound() {
+    function runAiCompleteRound() {
       if (isDisconnected) {
         showToast('連線中斷暫停中！', 'warning');
         return;
       }
       if (gameState.phase === 'revealed') {
-        await startNextRound();
+        startNextRound();
       }
       gameState.players.forEach(p => {
         if (!p.eliminated && !p.locked) {
@@ -1576,11 +1630,11 @@
         }
       });
       renderAllViews();
-      await revealAndCalculateRound();
+      revealAndCalculateRound();
     }
 
     // ================= Host Round Controls =================
-    async function revealAndCalculateRound() {
+    function revealAndCalculateRound() {
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法開牌結算！', 'warning');
         return;
@@ -1597,7 +1651,6 @@
         return;
       }
 
-      // 儲存「開牌扣分前」的完整分數與回合快照，供返回上一 Round 精準還原分數
       historyStack.push(JSON.parse(JSON.stringify(gameState)));
 
       const outcome = computeRoundOutcome(gameState.players, gameState.maxPlayers);
@@ -1607,7 +1660,6 @@
       gameState.invalidNumbers = outcome.invalidNumbers;
       gameState.roundNotice = outcome.notice;
 
-      // 執行扣分與淘汰判定
       gameState.players.forEach(p => {
         if (p.eliminated) return;
         p.locked = true;
@@ -1622,10 +1674,10 @@
       playRevealSound();
       showToast('⚡ 已開牌並完成本回合結算！', 'success');
       renderAllViews();
-      await syncFullRoomStateToCloud();
+      broadcastStateToAllClients();
     }
 
-    async function startNextRound() {
+    function startNextRound() {
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法進入下一回合！', 'warning');
         return;
@@ -1652,10 +1704,10 @@
 
       showToast(`進入第 ${gameState.round} 回合！所有存活玩家請重新選號`, 'info');
       renderAllViews();
-      await syncFullRoomStateToCloud();
+      broadcastStateToAllClients();
     }
 
-    async function returnToPreviousRound() {
+    function returnToPreviousRound() {
       if (isDisconnected) {
         showToast('連線中斷暫停中，無法操作！', 'warning');
         return;
@@ -1666,7 +1718,6 @@
       }
 
       const prevState = historyStack.pop();
-      // 完整還原該回合開牌前的回合數、所有玩家分數 (score) 與淘汰狀態 (eliminated)
       gameState = JSON.parse(JSON.stringify(prevState));
       gameState.phase = 'voting';
       gameState.answer = null;
@@ -1683,10 +1734,10 @@
 
       showToast(`↩️ 已返回第 ${gameState.round} 回合！所有玩家分數與淘汰狀態已還原，並解除鎖定`, 'warning');
       renderAllViews();
-      await syncFullRoomStateToCloud();
+      broadcastStateToAllClients();
     }
 
-    async function resetEntireGame() {
+    function resetEntireGame() {
       historyStack = [];
       selectedNumber = null;
       gameState.round = 1;
@@ -1706,7 +1757,7 @@
 
       showToast('⚠️ 已重置本局所有玩家分數為 10 分！', 'info');
       renderAllViews();
-      await syncFullRoomStateToCloud();
+      broadcastStateToAllClients();
     }
 
     // ================= Render Views =================
@@ -1724,15 +1775,14 @@
       const aliveCount = gameState.players.filter(p => !p.eliminated).length;
       const cfg = MODE_CONFIGS[gameState.maxPlayers] || MODE_CONFIGS[8];
 
-      const badgeP = document.querySelector('#view-player .font-number.font-bold.text-white.text-xs');
-      if (badgeP) badgeP.textContent = `P${me.id + 1}`;
+      const seatBadge = document.getElementById('player-seat-badge');
+      if (seatBadge) seatBadge.textContent = `P${me.id + 1}`;
 
       document.getElementById('player-round-num').textContent = gameState.round;
       const scoreEl = document.getElementById('player-score-display');
       scoreEl.textContent = me.score;
       scoreEl.className = `font-number font-black text-2xl ${me.score >= 7 ? 'text-emerald-400' : me.score >= 4 ? 'text-amber-400' : 'text-red-500'}`;
 
-      // Active Rules Badges
       const dupBadge = document.getElementById('player-rule-dup-badge');
       const precBadge = document.getElementById('player-rule-prec-badge');
       if (aliveCount <= cfg.duplicateThreshold) dupBadge.classList.remove('hidden');
@@ -1741,7 +1791,6 @@
       if (aliveCount <= cfg.precisionThreshold) precBadge.classList.remove('hidden');
       else precBadge.classList.add('hidden');
 
-      // Eliminated Check
       const elimBanner = document.getElementById('player-eliminated-banner');
       const padWrapper = document.getElementById('player-numberpad-wrapper');
       const lockBtn = document.getElementById('btn-player-lock');
@@ -1757,7 +1806,6 @@
         lockBtn.classList.remove('hidden');
       }
 
-      // Revealed Result Banner
       const revBanner = document.getElementById('player-revealed-banner');
       if (gameState.phase === 'revealed') {
         revBanner.classList.remove('hidden');
@@ -1770,11 +1818,9 @@
         revBanner.classList.add('hidden');
       }
 
-      // Current choice preview
       const currentPick = me.isLockedByPlayer ? me.choice : (selectedNumber !== null ? selectedNumber : me.choice);
       document.getElementById('player-selected-preview').textContent = currentPick !== null ? currentPick : '--';
 
-      // Render 1 - 100 Number Grid
       const grid = document.getElementById('player-number-grid');
       const isDisabled = gameState.phase !== 'voting' || me.isLockedByPlayer || isDisconnected;
 
@@ -1793,7 +1839,6 @@
       }
       grid.innerHTML = btnsHtml.join('');
 
-      // Lock Button State
       if (gameState.phase === 'revealed') {
         lockBtn.disabled = true;
         lockBtn.textContent = '⏳ 本回合已結算，等待下一回合...';
@@ -1822,7 +1867,6 @@
         phaseBadge.className = 'px-4 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-sm sm:text-base animate-pulse';
       }
 
-      // Rules badges
       const dupEl = document.getElementById('proj-rule-dup');
       const precEl = document.getElementById('proj-rule-prec');
       dupEl.textContent = `🚫 同數無效 (≤${cfg.duplicateThreshold}人)`;
@@ -1836,7 +1880,6 @@
         ? 'px-3 py-1 rounded-lg bg-red-950/90 border border-red-500 text-red-200 font-black shadow-[0_0_12px_rgba(239,68,68,0.4)]'
         : 'px-3 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-500 font-bold';
 
-      // Target & Average numbers
       if (gameState.phase === 'revealed' && gameState.answer !== null) {
         const outcome = computeRoundOutcome(gameState.players, gameState.maxPlayers);
         document.getElementById('proj-avg-display').textContent = outcome.avg.toFixed(2);
@@ -1848,7 +1891,6 @@
         document.getElementById('proj-notice-display').textContent = '等待所有存活參賽者完成鎖定';
       }
 
-      // Dynamic Grid Columns based on player count (5..10)
       const grid = document.getElementById('proj-players-grid');
       const colsClass = {
         5: 'grid-cols-2 sm:grid-cols-5',
@@ -1864,7 +1906,6 @@
         const isWinner = gameState.phase === 'revealed' && gameState.winnerIds.includes(p.id);
         const isInvalid = gameState.phase === 'revealed' && gameState.invalidNumbers.includes(p.choice);
 
-        // Score color logic (10 down to 0)
         const scoreColor = p.eliminated
           ? 'text-zinc-600'
           : p.score >= 7
@@ -1895,7 +1936,6 @@
 
             ${isWinner ? '<div class="absolute -top-3 px-2.5 py-0.5 rounded-full bg-amber-400 text-black font-black text-[10px] tracking-wider shadow">👑 WINNER</div>' : ''}
 
-            <!-- Enlarged Top Score Display -->
             <div class="mb-2">
               <div class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">LIFE SCORE</div>
               <div class="font-number text-3xl sm:text-4xl font-black leading-none ${scoreColor}">
@@ -1903,13 +1943,10 @@
               </div>
             </div>
 
-            <!-- Avatar -->
             <img src="${p.avatar}" alt="${p.name}" class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 ${p.eliminated ? 'border-zinc-700' : isWinner ? 'border-amber-400' : 'border-zinc-700'} mb-2" />
 
-            <!-- Name -->
             <div class="font-bold text-xs sm:text-sm text-white truncate w-full mb-2">${p.name}</div>
 
-            <!-- Choice / Status Box -->
             <div class="w-full py-2.5 rounded-xl bg-black/60 border border-zinc-800/90 flex flex-col items-center justify-center min-h-[58px]">
               ${numberBox}
             </div>
@@ -1939,7 +1976,6 @@
         ? 'p-3 rounded-xl bg-red-950/30 border border-red-500'
         : 'p-3 rounded-xl bg-zinc-950 border border-zinc-800 opacity-60';
 
-      // Render Host Monitoring Cards (Eliminated players grayed out)
       const hostGrid = document.getElementById('host-players-grid');
       hostGrid.innerHTML = gameState.players.map(p => {
         const isOut = p.eliminated;
@@ -1969,7 +2005,6 @@
         `;
       }).join('');
 
-      // Pre-Reveal Live Winner Preview Banner
       const previewWinnerEl = document.getElementById('host-preview-winner-name');
       const previewDetailEl = document.getElementById('host-preview-detail');
       const previewTargetEl = document.getElementById('host-preview-target');
@@ -2009,40 +2044,8 @@
       `).join('');
     }
 
-    // Expose handlers to global window for inline onclick attributes
-    Object.assign(window, {
-      manualReconnect,
-      forceTimeoutToLobby,
-      closePasswordModal,
-      verifyPassword,
-      showJoinRoomForm,
-      showCreateRoomForm,
-      backToLobbySelect,
-      selectRoomMode,
-      confirmCreateRoom,
-      confirmJoinRoom,
-      fillRemainingWithAi,
-      startGameFromLobby,
-      leaveLobbyRoom,
-      switchMainView,
-      requestViewAccess,
-      returnToLobby,
-      updatePlayerName,
-      lockPlayerAnswer,
-      selectNumber,
-      toggleBGM,
-      revealAndCalculateRound,
-      startNextRound,
-      returnToPreviousRound,
-      simulateDisconnect,
-      resetEntireGame,
-      runAiCompleteRound,
-      triggerAllAiThinkAndLock
-    });
-
-    // ================= Initialization =================
-    (async function init() {
-      await initCloudSync();
+    // ================= Initialization & URL Room Parameter Check =================
+    (function init() {
       const ruler = document.getElementById('proj-ruler-ticks');
       if (ruler) {
         ruler.innerHTML = Array.from({ length: 25 }).map((_, i) => {
@@ -2051,6 +2054,17 @@
           return `<span class="block bg-zinc-400/75 ${isCenter ? 'w-[2px] h-4 bg-white' : isMajor ? 'w-[1.5px] h-3' : 'w-[1px] h-1.5'}"></span>`;
         }).join('');
       }
+
+      // Check if opened via ?request_room=XXXX or ?room=XXXX
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const requestedRoom = (params.get('request_room') || params.get('room') || '').trim().toUpperCase();
+        if (requestedRoom) {
+          document.getElementById('join-room-code-input').value = requestedRoom;
+          document.getElementById('url-detected-code').textContent = requestedRoom;
+          document.getElementById('url-room-detected-banner').classList.remove('hidden');
+        }
+      } catch (e) {}
     })();
   </script>
 </body>
