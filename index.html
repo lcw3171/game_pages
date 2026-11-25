@@ -756,12 +756,17 @@
       if (!lobbyState.isHost) return;
       const lobbyEl = document.getElementById('view-lobby');
       const isPlaying = statusOverride ? statusOverride === 'playing' : (lobbyEl ? lobbyEl.classList.contains('hidden') : false);
+      const activeHostViewEl = ['projector', 'host', 'ai'].find(v => {
+        const el = document.getElementById('view-' + v);
+        return el && !el.classList.contains('hidden');
+      });
       const payload = {
         type: 'SYNC_STATE',
         status: statusOverride || (isPlaying ? 'playing' : 'waiting'),
         roomCode: lobbyState.roomCode,
         maxPlayers: lobbyState.maxPlayers,
         hostName: lobbyState.hostName,
+        hostActiveView: activeHostViewEl || 'host',
         lobbyPlayers: lobbyState.joinedPlayers,
         gameState: {
           roomCode: gameState.roomCode,
@@ -792,32 +797,23 @@
     }
 
     function removeParticipantByUid(uid, reasonText = '已離開房間') {
-      if (!uid || !lobbyState.isHost) return;
-
-      const lobbyEl = document.getElementById('view-lobby');
-      const isPlaying = lobbyEl ? lobbyEl.classList.contains('hidden') : false;
+      if (!uid) return;
       const lobbyIdx = lobbyState.joinedPlayers.findIndex(p => p.uid === uid);
-      const removedName = lobbyIdx !== -1
-        ? lobbyState.joinedPlayers[lobbyIdx].name
-        : (gameState.players.find(p => p.uid === uid)?.name || '玩家');
+      if (lobbyIdx !== -1) {
+        const removed = lobbyState.joinedPlayers[lobbyIdx];
+        lobbyState.joinedPlayers.splice(lobbyIdx, 1);
+        showToast(`🚪 ${removed.name || '玩家'} ${reasonText}`, 'warning');
+        renderWaitingRoom();
+        broadcastStateToAllClients('waiting');
+      }
 
-      if (!isPlaying) {
-        if (lobbyIdx !== -1) {
-          lobbyState.joinedPlayers.splice(lobbyIdx, 1);
-          showToast(`🚪 ${removedName} ${reasonText}`, 'warning');
-          renderWaitingRoom();
-          broadcastStateToAllClients('waiting');
-        }
-      } else {
-        const gp = gameState.players.find(p => p.uid === uid);
-        if (gp && !gp.isAi && !gp.eliminated) {
-          gp.eliminated = true;
-          gp.score = 0;
-          gp.locked = true;
-          showToast(`📡 ${removedName} ${reasonText}，已判定淘汰 (OUT)`, 'warning');
-          renderAllViews();
-          broadcastStateToAllClients('playing');
-        }
+      const gamePlayer = gameState.players.find(p => p.uid === uid);
+      if (gamePlayer && !gamePlayer.eliminated) {
+        gamePlayer.eliminated = true;
+        gamePlayer.locked = true;
+        showToast(`⚠️ ${gamePlayer.name} ${reasonText}，已標記為 OUT`, 'warning');
+        renderAllViews();
+        broadcastStateToAllClients('playing');
       }
     }
 
@@ -825,29 +821,33 @@
       if (!data || !data.type) return;
 
       if (data.type === 'COHOST_JOIN_REQUEST') {
-        const currentCoHosts = getActiveCoHostCount();
-        if (currentCoHosts >= MAX_HOST_DEVICES - 1) {
+        if (getActiveCoHostCount() >= MAX_HOST_DEVICES - 1) {
           session.conn.send({
             type: 'JOIN_REJECTED',
-            reason: `主持裝置已達上限（最多 ${MAX_HOST_DEVICES} 部主持裝置同時連線）！`
+            reason: `主持裝置已達上限（最多 ${MAX_HOST_DEVICES} 部，含主機）！`
           });
           return;
         }
         session.role = 'cohost';
-        session.uid = data.uid;
-        session.name = (data.name || '副主持').trim();
-        showToast(`👑 主持裝置「${session.name}」已加入同房協作 (${currentCoHosts + 2}/${MAX_HOST_DEVICES})`, 'success');
+        session.uid = data.uid || ('cohost_' + Date.now());
+        session.name = (data.name || '協作主持').trim();
 
         const lobbyEl = document.getElementById('view-lobby');
         const isPlaying = lobbyEl ? lobbyEl.classList.contains('hidden') : false;
+        const activeHostViewEl = ['projector', 'host', 'ai'].find(v => {
+          const el = document.getElementById('view-' + v);
+          return el && !el.classList.contains('hidden');
+        });
+
         session.conn.send({
           type: 'COHOST_ACCEPTED',
           status: isPlaying ? 'playing' : 'waiting',
           roomCode: lobbyState.roomCode,
           maxPlayers: lobbyState.maxPlayers,
           hostName: lobbyState.hostName,
+          hostActiveView: activeHostViewEl || 'host',
           lobbyPlayers: lobbyState.joinedPlayers,
-          gameState: {
+          gameState: isPlaying ? {
             roomCode: gameState.roomCode,
             maxPlayers: gameState.maxPlayers,
             round: gameState.round,
@@ -857,91 +857,130 @@
             invalidNumbers: gameState.invalidNumbers,
             roundNotice: gameState.roundNotice,
             players: gameState.players
-          }
+          } : null
         });
+
+        showToast(`🎙️ 協作主持「${session.name}」已進入房間 (${getActiveCoHostCount() + 1}/${MAX_HOST_DEVICES} 部主持裝置)`, 'success');
         return;
       }
 
       if (data.type === 'HOST_REMOTE_ACTION') {
-        if (session.role !== 'cohost') return;
         const act = data.action;
-        if (act === 'START_GAME') startGameFromLobby();
-        else if (act === 'FILL_AI') fillRemainingWithAi();
-        else if (act === 'REVEAL') revealAndCalculateRound();
-        else if (act === 'NEXT_ROUND') startNextRound();
-        else if (act === 'PREV_ROUND') returnToPreviousRound();
-        else if (act === 'RESET_GAME') resetEntireGame();
-        else if (act === 'AI_LOCK') triggerAllAiThinkAndLock();
-        else if (act === 'AI_COMPLETE') runAiCompleteRound();
+        if (act === 'AI_LOCK') {
+          triggerAllAiThinkAndLock();
+        } else if (act === 'AI_COMPLETE') {
+          runAiCompleteRound();
+        } else if (act === 'REVEAL') {
+          revealAndCalculateRound();
+        } else if (act === 'NEXT_ROUND') {
+          startNextRound();
+        } else if (act === 'PREV_ROUND') {
+          returnToPreviousRound();
+        } else if (act === 'RESET_GAME') {
+          resetEntireGame();
+        } else if (act === 'SIMULATE_DISCONNECT') {
+          simulateDisconnect();
+        } else if (act === 'SWITCH_VIEW' && ['projector', 'host', 'ai'].includes(data.viewName)) {
+          switchMainView(data.viewName);
+        } else if (act === 'RETURN_LOBBY') {
+          returnToLobby();
+        }
         return;
       }
 
       if (data.type === 'JOIN_REQUEST') {
         const lobbyEl = document.getElementById('view-lobby');
         const isPlaying = lobbyEl ? lobbyEl.classList.contains('hidden') : false;
-        const cleanName = (data.name || '').trim() || `玩家${lobbyState.joinedPlayers.length + 1}`;
+        const incomingUid = data.uid || ('p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6));
+        const incomingName = (data.name || '參賽者').trim();
+
         session.role = 'participant';
-        session.uid = data.uid;
-        session.name = cleanName;
+        session.uid = incomingUid;
+        session.name = incomingName;
 
-        const existingIdx = lobbyState.joinedPlayers.findIndex(p => p.uid === data.uid);
-
-        if (existingIdx !== -1) {
-          lobbyState.joinedPlayers[existingIdx].name = cleanName;
-          if (gameState.players[existingIdx]) {
-            gameState.players[existingIdx].name = cleanName;
-          }
-        } else {
-          if (isPlaying || lobbyState.joinedPlayers.length >= lobbyState.maxPlayers) {
+        if (!isPlaying) {
+          const existingIdx = lobbyState.joinedPlayers.findIndex(p => p.uid === incomingUid);
+          if (existingIdx !== -1) {
+            lobbyState.joinedPlayers[existingIdx].name = incomingName;
+          } else if (lobbyState.joinedPlayers.length >= lobbyState.maxPlayers) {
             session.conn.send({
               type: 'JOIN_REJECTED',
-              reason: isPlaying ? '遊戲已經開始，無法中途加入！' : '房間人數已滿！'
+              reason: `房間人數已滿（上限 ${lobbyState.maxPlayers} 人）！`
             });
             return;
+          } else {
+            lobbyState.joinedPlayers.push({
+              uid: incomingUid,
+              name: incomingName,
+              isAi: false,
+              isHost: false
+            });
+            showToast(`🚪 ${incomingName} 已加入房間 (${lobbyState.joinedPlayers.length}/${lobbyState.maxPlayers})`, 'success');
           }
-          lobbyState.joinedPlayers.push({
-            uid: data.uid,
-            name: cleanName,
-            isAi: false,
-            isHost: false
-          });
-          showToast(`📱 ${cleanName} 已加入房間！`, 'success');
-        }
 
-        renderWaitingRoom();
-        broadcastStateToAllClients();
-      } else if (data.type === 'PLAYER_ACTION') {
-        if (data.uid) session.uid = data.uid;
-        const target = gameState.players.find(p => p.uid === data.uid);
-        if (target) {
-          const wasLocked = target.locked;
-          if (typeof data.name === 'string' && data.name.trim()) {
-            target.name = data.name.trim();
-            session.name = target.name;
-          }
-          if (gameState.phase === 'voting' && !target.eliminated) {
-            target.choice = data.choice;
-            target.locked = Boolean(data.locked);
-            target.isLockedByPlayer = Boolean(data.isLockedByPlayer);
-            if (!wasLocked && target.locked) {
-              playProjectorLockSound();
+          renderWaitingRoom();
+          broadcastStateToAllClients('waiting');
+        } else {
+          const existingPlayer = gameState.players.find(p => p.uid === incomingUid);
+          if (existingPlayer) {
+            existingPlayer.name = incomingName;
+          } else {
+            const aiSlotIdx = gameState.players.findIndex(p => p.isAi && p.eliminated);
+            if (aiSlotIdx !== -1) {
+              gameState.players[aiSlotIdx] = {
+                ...gameState.players[aiSlotIdx],
+                uid: incomingUid,
+                name: incomingName,
+                score: 10,
+                eliminated: false,
+                choice: null,
+                locked: false,
+                isLockedByPlayer: false,
+                isAi: false,
+                avatar: createDefaultAvatar(aiSlotIdx + 1, `P${aiSlotIdx + 1}`)
+              };
+            } else {
+              session.conn.send({
+                type: 'JOIN_REJECTED',
+                reason: '遊戲已開始且沒有可替換的空位！'
+              });
+              return;
             }
           }
+
           renderAllViews();
-          broadcastStateToAllClients();
+          broadcastStateToAllClients('playing');
         }
-      } else if (data.type === 'LEAVE_LOBBY') {
-        const leavingUid = data.uid || session.uid;
-        session.uid = null;
-        if (session.role === 'cohost') {
-          showToast(`👑 主持裝置「${session.name || '副主持'}」已離開`, 'info');
-        } else {
-          removeParticipantByUid(leavingUid, '已離開房間');
+        return;
+      }
+
+      if (data.type === 'PLAYER_ACTION') {
+        const gp = gameState.players.find(p => p.uid === data.uid || p.id === data.playerId);
+        if (gp && !gp.eliminated && gameState.phase === 'voting') {
+          if (typeof data.name === 'string' && data.name.trim()) {
+            gp.name = data.name.trim();
+          }
+          if (data.choice !== null && data.choice !== undefined) {
+            gp.choice = Number(data.choice);
+          }
+          if (data.locked) {
+            gp.locked = true;
+            gp.isLockedByPlayer = true;
+            playProjectorLockSound();
+          }
+          renderAllViews();
+          broadcastStateToAllClients('playing');
         }
+        return;
+      }
+
+      if (data.type === 'LEAVE_LOBBY') {
+        removeParticipantByUid(data.uid || session.uid, '已主動離開房間');
+        return;
       }
     }
 
-    function applyCoHostGameState(remoteGameState) {
+    function applyCoHostGameState(remoteGameState, preferredView = null) {
       if (!remoteGameState) return;
       gameState = {
         ...gameState,
@@ -964,7 +1003,9 @@
       if (aiBtn) aiBtn.style.display = 'inline-block';
       if (lobbyEl) lobbyEl.classList.add('hidden');
       if (headerEl) headerEl.classList.remove('hidden');
-      switchMainView('projector');
+
+      const targetView = ['projector', 'host', 'ai'].includes(preferredView) ? preferredView : 'host';
+      switchMainView(targetView);
     }
 
     function handleClientIncomingMessage(data) {
@@ -988,7 +1029,7 @@
         lobbyState.isHost = true;
         lobbyState.joinedPlayers = data.lobbyPlayers || [];
         if (data.status === 'playing' && data.gameState) {
-          applyCoHostGameState(data.gameState);
+          applyCoHostGameState(data.gameState, data.hostActiveView);
         } else {
           document.getElementById('lobby-step-join').classList.add('hidden');
           document.getElementById('lobby-step-waiting').classList.remove('hidden');
@@ -1027,7 +1068,7 @@
           const isCurrentlyInLobby = lobbyEl ? !lobbyEl.classList.contains('hidden') : false;
           if (isCurrentlyInLobby) {
             if (lobbyState.isHost) {
-              applyCoHostGameState(data.gameState);
+              applyCoHostGameState(data.gameState, data.hostActiveView);
             } else {
               enterPlayingViewAsParticipant(data.gameState);
             }
@@ -1044,10 +1085,19 @@
             ...gameState,
             ...data.gameState
           };
-          renderAllViews();
-          if (lobbyState.isHost) {
-            broadcastStateToAllClients('playing');
+
+          if (lobbyState.isHost && data.hostActiveView) {
+            const currentView = ['projector', 'host', 'ai'].find(v => {
+              const el = document.getElementById('view-' + v);
+              return el && !el.classList.contains('hidden');
+            });
+            if (currentView !== data.hostActiveView) {
+              switchMainView(data.hostActiveView);
+              return;
+            }
           }
+
+          renderAllViews();
         }
       }
     }
@@ -1943,6 +1993,7 @@
     }
 
     function returnToLobby() {
+      if (sendCoHostAction('RETURN_LOBBY')) return;
       if (lobbyState.isHost) {
         broadcastStateToAllClients('closed');
       } else if (clientConnection && clientConnection.open) {
@@ -1981,36 +2032,129 @@
         }
       });
       renderAllViews();
+      if (lobbyState.isHost && ['projector', 'host', 'ai'].includes(viewName)) {
+        if (peerInstance && peerInstance.open) {
+          broadcastStateToAllClients();
+        } else if (clientConnection && clientConnection.open) {
+          clientConnection.send({ type: 'HOST_REMOTE_ACTION', action: 'SWITCH_VIEW', viewName });
+        }
+      }
     }
 
-    function requestViewAccess(viewName) {
+    function requestViewAccess(targetView) {
       if (authPasscodeVerified || lobbyState.isHost) {
-        switchMainView(viewName);
+        authPasscodeVerified = true;
+        switchMainView(targetView);
         return;
       }
-      pendingTargetView = viewName;
-      document.getElementById('host-password-input').value = '';
-      document.getElementById('password-modal').classList.remove('hidden');
+      pendingTargetView = targetView;
+      const modal = document.getElementById('password-modal');
+      const input = document.getElementById('host-password-input');
+      if (modal) modal.classList.remove('hidden');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
     }
 
     function closePasswordModal() {
-      document.getElementById('password-modal').classList.add('hidden');
       pendingTargetView = null;
+      const modal = document.getElementById('password-modal');
+      if (modal) modal.classList.add('hidden');
     }
 
     function verifyPassword() {
-      const val = document.getElementById('host-password-input').value.trim();
+      const input = document.getElementById('host-password-input');
+      const val = input ? input.value.trim() : '';
       if (val === '1234') {
         authPasscodeVerified = true;
+        const target = pendingTargetView || 'host';
         closePasswordModal();
-        if (pendingTargetView) switchMainView(pendingTargetView);
+        switchMainView(target);
+        showToast('已驗證主持權限', 'success');
       } else {
-        showToast('密碼錯誤！', 'error');
+        showToast('密碼錯誤，請重試（預設 1234）', 'error');
+      }
+    }
+
+    function clearDisconnectState() {
+      isDisconnected = false;
+      disconnectSecondsLeft = 600;
+      if (disconnectInterval) {
+        clearInterval(disconnectInterval);
+        disconnectInterval = null;
+      }
+      const overlay = document.getElementById('disconnect-overlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    function updateDisconnectTimerDisplay() {
+      const el = document.getElementById('disconnect-countdown');
+      if (!el) return;
+      const clamped = Math.max(0, disconnectSecondsLeft);
+      const mins = String(Math.floor(clamped / 60)).padStart(2, '0');
+      const secs = String(clamped % 60).padStart(2, '0');
+      el.textContent = `${mins}:${secs}`;
+    }
+
+    function manualReconnect() {
+      clearDisconnectState();
+      showToast('🔄 已恢復連線，繼續本回合！', 'success');
+      renderAllViews();
+    }
+
+    function forceTimeoutToLobby() {
+      clearDisconnectState();
+      cleanupPeerNetwork();
+      document.getElementById('game-main-header').classList.add('hidden');
+      ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      document.getElementById('view-lobby').classList.remove('hidden');
+      backToLobbySelect();
+      showToast('⏰ 連線逾時，已返回大廳', 'warning');
+    }
+
+    function getMyPlayerObject() {
+      if (!Array.isArray(gameState.players) || gameState.players.length === 0) return null;
+      const matched = gameState.players.find(p => p.uid === myPlayerUid);
+      if (matched) return matched;
+      return gameState.players.find(p => !p.isAi) || gameState.players[0];
+    }
+
+    function updatePlayerName(newName) {
+      const me = getMyPlayerObject();
+      if (!me) return;
+      const trimmed = (newName || '').trim();
+      if (!trimmed) return;
+      me.name = trimmed;
+      renderAllViews();
+      sendPlayerActionToHost(me);
+    }
+
+    function sendPlayerActionToHost(me) {
+      if (!me) return;
+      const payload = {
+        type: 'PLAYER_ACTION',
+        uid: myPlayerUid,
+        playerId: me.id,
+        name: me.name,
+        choice: me.choice,
+        locked: Boolean(me.locked)
+      };
+      if (lobbyState.isHost) {
+        broadcastStateToAllClients('playing');
+      } else if (clientConnection && clientConnection.open) {
+        try {
+          clientConnection.send(payload);
+        } catch (e) {}
       }
     }
 
     // ================= Disconnect Pause & 10-Min Timeout =================
     function simulateDisconnect() {
+      if (sendCoHostAction('SIMULATE_DISCONNECT')) return;
       if (isDisconnected) return;
       isDisconnected = true;
       disconnectSecondsLeft = 600;
@@ -2024,89 +2168,6 @@
           forceTimeoutToLobby();
         }
       }, 1000);
-    }
-
-    function updateDisconnectTimerDisplay() {
-      const mins = Math.floor(disconnectSecondsLeft / 60);
-      const secs = disconnectSecondsLeft % 60;
-      const el = document.getElementById('disconnect-countdown');
-      if (el) {
-        el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-      }
-    }
-
-    function clearDisconnectState() {
-      isDisconnected = false;
-      if (disconnectInterval) {
-        clearInterval(disconnectInterval);
-        disconnectInterval = null;
-      }
-      const overlay = document.getElementById('disconnect-overlay');
-      if (overlay) overlay.classList.add('hidden');
-    }
-
-    function manualReconnect() {
-      clearDisconnectState();
-      if (!lobbyState.isHost && lobbyState.roomCode && (!clientConnection || !clientConnection.open)) {
-        confirmJoinRoom();
-      }
-      showToast('✅ 已重新連線，繼續當前回合！', 'success');
-      renderAllViews();
-    }
-
-    function forceTimeoutToLobby() {
-      clearDisconnectState();
-      showToast('⏱️ 斷線超過 10 分鐘，全員自動返回大廳！', 'warning');
-      returnToLobby();
-    }
-
-    window.addEventListener('offline', () => {
-      const headerEl = document.getElementById('game-main-header');
-      if (headerEl && !headerEl.classList.contains('hidden')) {
-        simulateDisconnect();
-      }
-    });
-
-    window.addEventListener('online', () => {
-      if (isDisconnected) {
-        manualReconnect();
-      }
-    });
-
-    // ================= Player Actions =================
-    function getMyPlayerObject() {
-      if (!gameState.players || gameState.players.length === 0) return null;
-      const found = gameState.players.find(p => p.uid === myPlayerUid);
-      return found || gameState.players[0];
-    }
-
-    function sendPlayerActionToHost(playerObj) {
-      if (lobbyState.isHost) {
-        broadcastStateToAllClients();
-        return;
-      }
-      if (clientConnection && clientConnection.open) {
-        try {
-          clientConnection.send({
-            type: 'PLAYER_ACTION',
-            uid: myPlayerUid,
-            name: playerObj.name,
-            choice: playerObj.choice,
-            locked: playerObj.locked,
-            isLockedByPlayer: playerObj.isLockedByPlayer
-          });
-        } catch (e) {
-          console.error('Send player action failed:', e);
-        }
-      }
-    }
-
-    function updatePlayerName(newName) {
-      const me = getMyPlayerObject();
-      if (!me) return;
-      me.name = newName.trim() || '參賽者';
-      renderAllViews();
-      sendPlayerActionToHost(me);
     }
 
     function selectNumber(num) {
