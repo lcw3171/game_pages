@@ -102,17 +102,12 @@
       系統偵測到連線中斷，已自動凍結當前選號與倒數狀態。請檢查網路並等待重新連線。
     </p>
     <div class="bg-zinc-900 border border-zinc-700 rounded-2xl px-8 py-4 mb-6">
-      <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">全員自動返回大廳倒數</div>
+      <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">10 分鐘重連等待倒數</div>
       <div id="disconnect-countdown" class="font-number text-4xl font-black text-amber-400">10:00</div>
     </div>
-    <div class="flex flex-wrap gap-3 justify-center">
-      <button type="button" onclick="manualReconnect()" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg transition">
-        🔄 立即重新連線 (Reconnect)
-      </button>
-      <button type="button" onclick="forceTimeoutToLobby()" class="px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold border border-zinc-700 transition">
-        🏠 立即返回大廳
-      </button>
-    </div>
+    <p class="text-xs text-zinc-400">
+      斷線玩家重新輸入房號加入後，系統會自動解除凍結並恢復原有遊戲進度。
+    </p>
   </div>
 
   <!-- Host Passcode Modal -->
@@ -331,15 +326,15 @@
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-black transition">
           📱 參加者端
         </button>
-        <button id="nav-btn-projector" type="button" onclick="requestViewAccess('projector')"
+        <button id="nav-btn-projector" type="button" onclick="switchMainView('projector')"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
           🖥️ 投影大螢幕
         </button>
-        <button id="nav-btn-host" type="button" onclick="requestViewAccess('host')"
+        <button id="nav-btn-host" type="button" onclick="switchMainView('host')"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
           🛠️ 主持後台
         </button>
-        <button id="nav-btn-ai" type="button" onclick="requestViewAccess('ai')"
+        <button id="nav-btn-ai" type="button" onclick="switchMainView('ai')"
           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition">
           🤖 AI 測試
         </button>
@@ -1125,9 +1120,18 @@
       const hBtn = document.getElementById('nav-btn-host');
       const aiBtn = document.getElementById('nav-btn-ai');
       if (pBtn) pBtn.style.display = 'none';
-      if (projBtn) projBtn.style.display = 'inline-block';
-      if (hBtn) hBtn.style.display = 'inline-block';
-      if (aiBtn) aiBtn.style.display = 'inline-block';
+      if (projBtn) {
+        projBtn.style.display = 'inline-block';
+        projBtn.onclick = () => switchMainView('projector');
+      }
+      if (hBtn) {
+        hBtn.style.display = 'inline-block';
+        hBtn.onclick = () => switchMainView('host');
+      }
+      if (aiBtn) {
+        aiBtn.style.display = 'inline-block';
+        aiBtn.onclick = () => switchMainView('ai');
+      }
       if (lobbyEl) lobbyEl.classList.add('hidden');
       if (headerEl) headerEl.classList.remove('hidden');
 
@@ -2192,6 +2196,40 @@
     }
 
     // ================= Disconnect Pause & 10-Min Timeout =================
+    function updateDisconnectTimerDisplay() {
+      const el = document.getElementById('disconnect-countdown');
+      if (!el) return;
+      const mins = Math.floor(disconnectSecondsLeft / 60);
+      const secs = disconnectSecondsLeft % 60;
+      el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function clearDisconnectState() {
+      isDisconnected = false;
+      disconnectSecondsLeft = 600;
+      if (disconnectInterval) {
+        clearInterval(disconnectInterval);
+        disconnectInterval = null;
+      }
+      const overlay = document.getElementById('disconnect-overlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function manualReconnect() {
+      if (lobbyState.isCoHostClient && clientConnection && clientConnection.open) {
+        clientConnection.send({ type: 'HOST_REMOTE_ACTION', action: 'FORCE_RECONNECT_RESUME' });
+        return;
+      }
+      disconnectedPlayersMap = {};
+      clearDisconnectState();
+      if (lobbyState.isHost && !lobbyState.isCoHostClient) {
+        broadcastStateToAllClients('playing');
+      }
+      showToast('✅ 連線已恢復，遊戲繼續進行！', 'success');
+    }
+
     function applyGlobalFreezeOverlay(namesList = ['玩家'], secondsRemaining = 600) {
       disconnectSecondsLeft = Math.max(0, Math.floor(secondsRemaining));
       const overlay = document.getElementById('disconnect-overlay');
@@ -2199,10 +2237,10 @@
         const titleEl = overlay.querySelector('h2');
         const descEl = overlay.querySelector('p');
         if (titleEl) {
-          titleEl.textContent = `📡 ${namesList.join('、')} 斷線 · 全場已凍結`;
+          titleEl.textContent = `📡 有人斷線（${namesList.join('、')}）· 畫面已凍結等待重連`;
         }
         if (descEl) {
-          descEl.textContent = '系統偵測到有玩家斷線，全場畫面已暫停。該玩家可在 10 分鐘內使用原名稱重新輸入房號加入並恢復斷線前進度；若超時未重連，全員將自動返回大廳。';
+          descEl.textContent = '目前有人斷線，其他人畫面已凍結並不會被踢出房間。已設定 10 分鐘計時器等待該玩家重新入房，重連後提示會自動消失並恢復正常遊戲！';
         }
         overlay.classList.remove('hidden');
       }
@@ -2211,10 +2249,11 @@
       if (!isDisconnected) {
         isDisconnected = true;
         disconnectInterval = setInterval(() => {
-          disconnectSecondsLeft -= 1;
+          disconnectSecondsLeft = Math.max(0, disconnectSecondsLeft - 1);
           updateDisconnectTimerDisplay();
           if (disconnectSecondsLeft <= 0) {
-            forceTimeoutToLobby();
+            const labelEl = document.getElementById('disconnect-countdown');
+            if (labelEl) labelEl.textContent = '00:00 (已逾 10 分鐘，仍凍結等待重連)';
           }
         }, 1000);
       }
