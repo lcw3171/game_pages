@@ -611,6 +611,14 @@
     const PEER_PREFIX = 'scale-judge-v1-';
     const MAX_HOST_DEVICES = 3;
     const LOCAL_ROOMS_STORAGE_KEY = 'scale_judge_active_rooms_v1';
+    const PEER_ICE_CONFIG = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' }
+      ]
+    };
 
     let peerInstance = null;
     let clientConnection = null;
@@ -619,6 +627,8 @@
     let localChannel = null;
     let localActiveRoomCode = null;
     let localJoinedUids = [];
+    let disconnectedPlayersMap = {}; // { uid: { uid, name, disconnectedAt } }
+    let hostDisconnectWatchdog = null;
 
     const myPlayerUid = (() => {
       try {
@@ -717,6 +727,11 @@
     }
 
     function cleanupPeerNetwork() {
+      if (hostDisconnectWatchdog) {
+        clearInterval(hostDisconnectWatchdog);
+        hostDisconnectWatchdog = null;
+      }
+      disconnectedPlayersMap = {};
       try {
         hostPeerSessions.forEach(s => {
           if (s && s.conn) {
@@ -736,7 +751,7 @@
         peerInstance = null;
       }
 
-      if (lobbyState.isHost && lobbyState.roomCode) {
+      if (lobbyState.isHost && !lobbyState.isCoHostClient && lobbyState.roomCode) {
         unregisterLocalRoom(lobbyState.roomCode);
       }
 
@@ -752,14 +767,28 @@
       return hostPeerSessions.filter(s => s && s.role === 'cohost' && s.conn && s.conn.open).length;
     }
 
+    function getFreezeStatePayload() {
+      const entries = Object.values(disconnectedPlayersMap);
+      if (entries.length === 0) return null;
+      const earliest = entries.reduce((min, item) => Math.min(min, item.disconnectedAt), Date.now());
+      const elapsedSec = Math.floor((Date.now() - earliest) / 1000);
+      const secondsLeft = Math.max(0, 600 - elapsedSec);
+      return {
+        active: true,
+        names: entries.map(e => e.name),
+        secondsLeft
+      };
+    }
+
     function broadcastStateToAllClients(statusOverride = null) {
-      if (!lobbyState.isHost) return;
+      if (!lobbyState.isHost || lobbyState.isCoHostClient) return;
       const lobbyEl = document.getElementById('view-lobby');
       const isPlaying = statusOverride ? statusOverride === 'playing' : (lobbyEl ? lobbyEl.classList.contains('hidden') : false);
       const activeHostViewEl = ['projector', 'host', 'ai'].find(v => {
         const el = document.getElementById('view-' + v);
         return el && !el.classList.contains('hidden');
       });
+      const freezeState = getFreezeStatePayload();
       const payload = {
         type: 'SYNC_STATE',
         status: statusOverride || (isPlaying ? 'playing' : 'waiting'),
@@ -768,6 +797,7 @@
         hostName: lobbyState.hostName,
         hostActiveView: activeHostViewEl || 'host',
         lobbyPlayers: lobbyState.joinedPlayers,
+        freezeState,
         gameState: {
           roomCode: gameState.roomCode,
           maxPlayers: gameState.maxPlayers,
@@ -796,23 +826,42 @@
       });
     }
 
+    function syncFreezeOverlayFromState(freezeState) {
+      if (freezeState && freezeState.active) {
+        applyGlobalFreezeOverlay(freezeState.names || ['玩家'], freezeState.secondsLeft ?? 600);
+      } else if (isDisconnected) {
+        clearDisconnectState();
+        showToast('✅ 斷線玩家已重新連線，遊戲繼續！', 'success');
+      }
+    }
+
     function removeParticipantByUid(uid, reasonText = '已離開房間') {
       if (!uid) return;
+      const lobbyEl = document.getElementById('view-lobby');
+      const isPlaying = lobbyEl ? lobbyEl.classList.contains('hidden') : false;
+
       const lobbyIdx = lobbyState.joinedPlayers.findIndex(p => p.uid === uid);
-      if (lobbyIdx !== -1) {
+      if (lobbyIdx !== -1 && !isPlaying) {
         const removed = lobbyState.joinedPlayers[lobbyIdx];
         lobbyState.joinedPlayers.splice(lobbyIdx, 1);
         showToast(`🚪 ${removed.name || '玩家'} ${reasonText}`, 'warning');
         renderWaitingRoom();
         broadcastStateToAllClients('waiting');
+        return;
       }
 
       const gamePlayer = gameState.players.find(p => p.uid === uid);
-      if (gamePlayer && !gamePlayer.eliminated) {
-        gamePlayer.eliminated = true;
-        gamePlayer.locked = true;
-        showToast(`⚠️ ${gamePlayer.name} ${reasonText}，已標記為 OUT`, 'warning');
-        renderAllViews();
+      if (isPlaying && gamePlayer && !gamePlayer.eliminated && !gamePlayer.isAi) {
+        if (!disconnectedPlayersMap[uid]) {
+          disconnectedPlayersMap[uid] = {
+            uid,
+            name: gamePlayer.name,
+            disconnectedAt: Date.now()
+          };
+        }
+        const freezeInfo = getFreezeStatePayload();
+        applyGlobalFreezeOverlay(freezeInfo.names, freezeInfo.secondsLeft);
+        showToast(`📡 ${gamePlayer.name} ${reasonText}！全場已凍結，限 10 分鐘內重連恢復進度`, 'warning');
         broadcastStateToAllClients('playing');
       }
     }
@@ -847,6 +896,7 @@
           hostName: lobbyState.hostName,
           hostActiveView: activeHostViewEl || 'host',
           lobbyPlayers: lobbyState.joinedPlayers,
+          freezeState: getFreezeStatePayload(),
           gameState: isPlaying ? {
             roomCode: gameState.roomCode,
             maxPlayers: gameState.maxPlayers,
@@ -866,7 +916,11 @@
 
       if (data.type === 'HOST_REMOTE_ACTION') {
         const act = data.action;
-        if (act === 'AI_LOCK') {
+        if (act === 'FILL_AI_LOBBY') {
+          fillRemainingWithAi();
+        } else if (act === 'START_GAME') {
+          startGameFromLobby();
+        } else if (act === 'AI_LOCK') {
           triggerAllAiThinkAndLock();
         } else if (act === 'AI_COMPLETE') {
           runAiCompleteRound();
@@ -880,6 +934,11 @@
           resetEntireGame();
         } else if (act === 'SIMULATE_DISCONNECT') {
           simulateDisconnect();
+        } else if (act === 'FORCE_RECONNECT_RESUME') {
+          disconnectedPlayersMap = {};
+          clearDisconnectState();
+          showToast('🔄 主持已解除凍結，遊戲繼續！', 'success');
+          broadcastStateToAllClients('playing');
         } else if (act === 'SWITCH_VIEW' && ['projector', 'host', 'ai'].includes(data.viewName)) {
           switchMainView(data.viewName);
         } else if (act === 'RETURN_LOBBY') {
@@ -921,9 +980,34 @@
           renderWaitingRoom();
           broadcastStateToAllClients('waiting');
         } else {
-          const existingPlayer = gameState.players.find(p => p.uid === incomingUid);
+          // 1) 優先比對原本斷線中的 UID 或相同名稱的真人玩家，讓他無縫回到斷線前進度
+          let existingPlayer = gameState.players.find(p => p.uid === incomingUid);
+          if (!existingPlayer) {
+            existingPlayer = gameState.players.find(p => !p.isAi && disconnectedPlayersMap[p.uid] && p.name.toLowerCase() === incomingName.toLowerCase());
+          }
+          if (!existingPlayer) {
+            existingPlayer = gameState.players.find(p => !p.isAi && p.name.toLowerCase() === incomingName.toLowerCase());
+          }
+
           if (existingPlayer) {
+            const oldUid = existingPlayer.uid;
+            existingPlayer.uid = incomingUid;
             existingPlayer.name = incomingName;
+            session.uid = incomingUid;
+
+            if (disconnectedPlayersMap[oldUid]) {
+              delete disconnectedPlayersMap[oldUid];
+            }
+            if (disconnectedPlayersMap[incomingUid]) {
+              delete disconnectedPlayersMap[incomingUid];
+            }
+
+            if (Object.keys(disconnectedPlayersMap).length === 0 && isDisconnected) {
+              clearDisconnectState();
+              showToast(`🔄 ${incomingName} 已在限時內重連並恢復進度，全場解除凍結！`, 'success');
+            } else {
+              showToast(`🔄 ${incomingName} 已重新連線並恢復原有進度！`, 'success');
+            }
           } else {
             const aiSlotIdx = gameState.players.findIndex(p => p.isAi && p.eliminated);
             if (aiSlotIdx !== -1) {
@@ -1005,7 +1089,7 @@
       if (headerEl) headerEl.classList.remove('hidden');
 
       const targetView = ['projector', 'host', 'ai'].includes(preferredView) ? preferredView : 'host';
-      switchMainView(targetView);
+      switchMainView(targetView, true);
     }
 
     function handleClientIncomingMessage(data) {
@@ -1027,7 +1111,9 @@
         lobbyState.maxPlayers = data.maxPlayers;
         lobbyState.hostName = data.hostName;
         lobbyState.isHost = true;
+        lobbyState.isCoHostClient = true;
         lobbyState.joinedPlayers = data.lobbyPlayers || [];
+        syncFreezeOverlayFromState(data.freezeState);
         if (data.status === 'playing' && data.gameState) {
           applyCoHostGameState(data.gameState, data.hostActiveView);
         } else {
@@ -1057,6 +1143,7 @@
         lobbyState.maxPlayers = data.maxPlayers;
         lobbyState.hostName = data.hostName;
         lobbyState.joinedPlayers = data.lobbyPlayers || [];
+        syncFreezeOverlayFromState(data.freezeState);
 
         if (data.status === 'waiting') {
           document.getElementById('lobby-step-select').classList.add('hidden');
@@ -1092,7 +1179,7 @@
               return el && !el.classList.contains('hidden');
             });
             if (currentView !== data.hostActiveView) {
-              switchMainView(data.hostActiveView);
+              switchMainView(data.hostActiveView, true);
               return;
             }
           }
@@ -1117,6 +1204,7 @@
       roomCode: '',
       maxPlayers: 8,
       isHost: false,
+      isCoHostClient: false,
       hostName: '',
       joinedPlayers: []
     };
@@ -1163,408 +1251,7 @@
 
     function playProjectorLockSound() {
       try {
-        ensureAudioCtx();
-        if (!audioCtx) return;
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, now);
-        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.12);
-        gain.gain.setValueAtTime(0.22, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.26);
-      } catch (e) {}
-    }
-
-    function playRevealSound() {
-      try {
-        ensureAudioCtx();
-        if (!audioCtx) return;
-        const now = audioCtx.currentTime;
-        [261.63, 329.63, 392.00, 523.25].forEach((freq, idx) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
-          gain.gain.setValueAtTime(0.15, now + idx * 0.08);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.45);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start(now + idx * 0.08);
-          osc.stop(now + idx * 0.08 + 0.46);
-        });
-      } catch (e) {}
-    }
-
-    function toggleBGM() {
-      const btn = document.getElementById('btn-bgm-toggle');
-      if (bgmPlaying) {
-        bgmPlaying = false;
-        clearInterval(bgmTimer);
-        bgmTimer = null;
-        if (btn) btn.textContent = '🔇 緊張音效：關';
-        return;
-      }
-      ensureAudioCtx();
-      bgmPlaying = true;
-      if (btn) btn.textContent = '🔊 緊張音效：開';
-      let beat = 0;
-      bgmTimer = setInterval(() => {
-        if (!bgmPlaying || !audioCtx) return;
-        try {
-          const now = audioCtx.currentTime;
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(beat % 2 === 0 ? 65.41 : 73.42, now);
-          gain.gain.setValueAtTime(0.14, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start(now);
-          osc.stop(now + 0.23);
-          beat++;
-        } catch (e) {}
-      }, 650);
-    }
-
-    // ================= Helper Utilities =================
-    function showToast(msg, type = 'info') {
-      const container = document.getElementById('toast-container');
-      if (!container) return;
-      const colors = {
-        info: 'bg-zinc-900 border-zinc-700 text-zinc-100',
-        success: 'bg-emerald-950/95 border-emerald-600 text-emerald-200',
-        warning: 'bg-amber-950/95 border-amber-500 text-amber-200',
-        error: 'bg-red-950/95 border-red-600 text-red-200'
-      };
-      const el = document.createElement('div');
-      el.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl text-xs sm:text-sm font-bold transition-all duration-300 ${colors[type] || colors.info}`;
-      el.textContent = msg;
-      container.appendChild(el);
-      setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-8px)';
-        setTimeout(() => el.remove(), 300);
-      }, 3200);
-    }
-
-    function generateRoomCode() {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let code = '';
-      for (let i = 0; i < 4; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return code;
-    }
-
-    function buildRoomShareUrl(code) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('room');
-      url.searchParams.set('request_room', code);
-      return url.toString();
-    }
-
-    function copyRoomInviteLink() {
-      const input = document.getElementById('shareable-room-url-input');
-      if (!input || !input.value) return;
-      input.select();
-      input.setSelectionRange(0, 99999);
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(input.value).catch(() => {});
-        } else {
-          document.execCommand('copy');
-        }
-      } catch (e) {
-        try { document.execCommand('copy'); } catch (err) {}
-      }
-      showToast('🔗 已複製專屬邀請連結！貼給參加者打開即可自動識別房號', 'success');
-    }
-
-    function createDefaultAvatar(index, label) {
-      const palettes = ['#dc2626', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#4f46e5', '#ea580c', '#16a34a'];
-      const bg = palettes[(index - 1) % palettes.length];
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-        <rect width="120" height="120" rx="24" fill="${bg}"/>
-        <circle cx="60" cy="46" r="22" fill="rgba(255,255,255,0.88)"/>
-        <path d="M24 106 C24 80, 96 80, 96 106" fill="rgba(255,255,255,0.88)"/>
-        <text x="60" y="114" font-family="monospace" font-size="14" font-weight="bold" fill="#000" text-anchor="middle">${label}</text>
-      </svg>`;
-      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-    }
-
-    // ================= Core Math & Rules Evaluation Engine =================
-    function computeRoundOutcome(playersList, maxPlayersMode) {
-      const alivePlayers = playersList.filter(p => !p.eliminated);
-      const aliveCount = alivePlayers.length;
-      const cfg = MODE_CONFIGS[maxPlayersMode] || MODE_CONFIGS[8];
-
-      const duplicateRuleActive = aliveCount <= cfg.duplicateThreshold;
-      const precisionRuleActive = aliveCount <= cfg.precisionThreshold;
-
-      const freqMap = {};
-      alivePlayers.forEach(p => {
-        if (p.choice !== null && p.choice !== undefined) {
-          freqMap[p.choice] = (freqMap[p.choice] || 0) + 1;
-        }
-      });
-
-      const invalidNumbers = [];
-      if (duplicateRuleActive) {
-        Object.keys(freqMap).forEach(numStr => {
-          if (freqMap[numStr] >= 2) {
-            invalidNumbers.push(Number(numStr));
-          }
-        });
-      }
-
-      const validPlayers = alivePlayers.filter(p => p.choice !== null && !invalidNumbers.includes(p.choice));
-
-      if (validPlayers.length === 0) {
-        return {
-          avg: 0,
-          answer: 0,
-          winnerIds: [],
-          invalidNumbers,
-          penalty: 1,
-          notice: '⚠️ 全員選擇相同數字全數無效！本回合無人勝出，全員扣 1 分！'
-        };
-      }
-
-      const sum = validPlayers.reduce((acc, p) => acc + Number(p.choice), 0);
-      const avg = sum / validPlayers.length;
-      const answer = Number((avg * 0.8).toFixed(2));
-
-      let minDiff = Infinity;
-      validPlayers.forEach(p => {
-        const diff = Math.abs(Number(p.choice) - answer);
-        if (diff < minDiff - 0.0001) {
-          minDiff = diff;
-        }
-      });
-
-      const winnerIds = validPlayers
-        .filter(p => Math.abs(Math.abs(Number(p.choice) - answer) - minDiff) <= 0.0001)
-        .map(p => p.id);
-
-      let penalty = 1;
-      let precisionTriggered = false;
-      if (precisionRuleActive && minDiff <= 1.0) {
-        penalty = 2;
-        precisionTriggered = true;
-      }
-
-      const winnerNames = alivePlayers.filter(p => winnerIds.includes(p.id)).map(p => p.name).join('、');
-      let notice = `🏆 勝出者：${winnerNames}（誤差 ${minDiff.toFixed(2)}）`;
-      if (invalidNumbers.length > 0) {
-        notice += ` ｜ 🚫 無效重複數字：[${invalidNumbers.join(', ')}]`;
-      }
-      if (precisionTriggered) {
-        notice += ` ｜ ⚡ 觸發精準重擊！落敗者扣 2 分！`;
-      }
-
-      return {
-        avg: Number(avg.toFixed(2)),
-        answer,
-        winnerIds,
-        invalidNumbers,
-        penalty,
-        notice
-      };
-    }
-
-    // ================= Lobby UI & Room Handlers =================
-    function showJoinRoomForm() {
-      document.getElementById('lobby-step-select').classList.add('hidden');
-      document.getElementById('lobby-step-join').classList.remove('hidden');
-
-      const titleEl = document.getElementById('join-form-title');
-      const labelEl = document.getElementById('join-code-label');
-      const helperEl = document.getElementById('join-code-helper');
-      const input = document.getElementById('join-room-code-input');
-      const btn = document.getElementById('btn-confirm-join');
-
-      if (titleEl) titleEl.textContent = '🚪 加入現有房間';
-      if (labelEl) labelEl.textContent = '輸入 4 位數房間代碼（額外主持裝置可加 -HOST）';
-      if (helperEl) helperEl.textContent = '一般參賽者請輸入主持人提供的 4 位數房間代碼。';
-      if (input) {
-        input.dataset.forceCoHost = '';
-        input.maxLength = 10;
-        input.placeholder = '例如：8492 或 8492-HOST';
-        input.className = 'w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 text-center font-number text-2xl sm:text-3xl font-black tracking-[0.25em] text-emerald-400 uppercase mb-2 focus:outline-none';
-        input.focus();
-      }
-      if (btn) {
-        btn.className = 'w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950/50 transition';
-        btn.textContent = '連線並加入房間 →';
-      }
-    }
-
-    function openCoHostJoinForm() {
-      const nameInput = document.getElementById('lobby-player-name');
-      const currentCoHostSlot = Math.min(getActiveCoHostCount() + 1, MAX_HOST_DEVICES - 1);
-      if (nameInput && !nameInput.value.trim()) {
-        nameInput.value = `協作主持 #${currentCoHostSlot}`;
-      }
-      document.getElementById('lobby-step-select').classList.add('hidden');
-      document.getElementById('lobby-step-join').classList.remove('hidden');
-
-      const titleEl = document.getElementById('join-form-title');
-      const labelEl = document.getElementById('join-code-label');
-      const helperEl = document.getElementById('join-code-helper');
-      const codeInput = document.getElementById('join-room-code-input');
-      const btn = document.getElementById('btn-confirm-join');
-
-      if (titleEl) titleEl.textContent = '🎙️ 協作主持進入後台';
-      if (labelEl) labelEl.textContent = '輸入主持人的 4 位數房間代碼';
-      if (helperEl) helperEl.textContent = '此房間最多允許 2 位協作主持同時進入後台，輸入 4 位數房號即可連線。';
-
-      if (codeInput) {
-        codeInput.dataset.forceCoHost = '1';
-        codeInput.maxLength = 4;
-        codeInput.value = '';
-        codeInput.placeholder = '輸入 4 位數房號（例：A8K2）';
-        codeInput.className = 'w-full px-4 py-4 rounded-2xl bg-zinc-950 border-2 border-amber-500/70 focus:border-amber-400 text-center font-number text-2xl sm:text-3xl font-black tracking-[0.35em] text-amber-400 uppercase mb-2 focus:outline-none';
-        codeInput.focus();
-      }
-
-      if (btn) {
-        btn.className = 'w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-base shadow-lg shadow-amber-950/50 transition';
-        btn.textContent = '確認 4 位數房號並進入主持後台 →';
-      }
-
-      showToast('請輸入主持人的 4 位數房間代碼以進入後台', 'info');
-    }
-
-    function quickJoinDetectedRoom() {
-      const code = document.getElementById('url-detected-code').textContent.trim();
-      if (code && code !== '----') {
-        document.getElementById('join-room-code-input').value = code;
-        confirmJoinRoom();
-      }
-    }
-
-    function showCreateRoomForm() {
-      document.getElementById('lobby-step-select').classList.add('hidden');
-      document.getElementById('lobby-step-create').classList.remove('hidden');
-      selectRoomMode(lobbyState.maxPlayers || 8);
-    }
-
-    function backToLobbySelect() {
-      document.getElementById('lobby-step-join').classList.add('hidden');
-      document.getElementById('lobby-step-create').classList.add('hidden');
-      document.getElementById('lobby-step-waiting').classList.add('hidden');
-      document.getElementById('lobby-step-select').classList.remove('hidden');
-    }
-
-    function selectRoomMode(count) {
-      lobbyState.maxPlayers = count;
-      document.querySelectorAll('.mode-option-btn').forEach(btn => {
-        const m = Number(btn.getAttribute('data-mode'));
-        if (m === count) {
-          btn.className = 'mode-option-btn py-3 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-amber-300 font-black text-sm transition';
-        } else {
-          btn.className = 'mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition';
-        }
-      });
-
-      const cfg = MODE_CONFIGS[count] || MODE_CONFIGS[8];
-      const preview = document.getElementById('create-mode-rules-preview');
-      if (preview) {
-        preview.innerHTML = `
-          <div class="font-bold text-amber-400">📋 ${count} 人局平衡規則門檻：</div>
-          <div>• 基礎規則：全場平均數 × 0.8，最接近者勝出（其餘扣 1 分）</div>
-          <div>• 【同數無效】解鎖條件：存活人數 ≤ <span class="text-white font-bold">${cfg.duplicateThreshold} 人</span></div>
-          <div>• 【精準重擊】解鎖條件：存活人數 ≤ <span class="text-red-400 font-bold">${cfg.precisionThreshold} 人</span>（誤差 ≤ 1 使對手扣 2 分）</div>
-        `;
-      }
-    }
-
-    function confirmCreateRoom() {
-      const btn = document.getElementById('btn-confirm-create');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '⏳ 正在建立房間節點...';
-      }
-
-      cleanupPeerNetwork();
-
-      const pName = document.getElementById('lobby-player-name').value.trim() || '主持人';
-      const code = generateRoomCode();
-      const peerId = PEER_PREFIX + code;
-
-      const activateLocalHostFallback = (notifyWarning = true) => {
-        isLocalFallbackMode = true;
-        registerLocalRoom(code, lobbyState.maxPlayers, pName);
-
-        lobbyState.roomCode = code;
-        lobbyState.isHost = true;
-        lobbyState.hostName = pName;
-        lobbyState.joinedPlayers = [];
-        hostPeerSessions = [];
-        localJoinedUids = [];
-
-        ensureLocalChannel(code, (msg) => {
-          if (!msg || !msg.type || msg.senderUid === myPlayerUid) return;
-          const virtualSession = {
-            conn: {
-              open: true,
-              send: (outData) => sendLocalChannelMessage({ ...outData, targetUid: msg.uid, senderUid: myPlayerUid })
-            },
-            role: 'participant',
-            uid: msg.uid || null,
-            name: msg.name || ''
-          };
-          handleHostIncomingMessage(virtualSession, msg);
-        });
-
-        try {
-          const shareUrl = buildRoomShareUrl(code);
-          window.history.replaceState({}, '', shareUrl);
-          const linkInput = document.getElementById('shareable-room-url-input');
-          if (linkInput) linkInput.value = shareUrl;
-        } catch (e) {}
-
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = '建立房間與專屬分享連結 →';
-        }
-
-        document.getElementById('lobby-step-create').classList.add('hidden');
-        document.getElementById('lobby-step-waiting').classList.remove('hidden');
-        renderWaitingRoom();
-        updateConnectionBadge('沙盒／本機同源同步模式已啟動（支援同裝置多開分頁測試）', true);
-
-        if (notifyWarning) {
-          showToast(`✅ 房間 [${code}] 已建立（預覽沙盒已自動啟用本機即時同步）`, 'info');
-        }
-      };
-
-      if (typeof Peer === 'undefined') {
-        activateLocalHostFallback(true);
-        return;
-      }
-
-      let fallbackTriggered = false;
-      const safeFallbackOnce = () => {
-        if (fallbackTriggered) return;
-        fallbackTriggered = true;
-        try {
-          if (peerInstance) {
-            peerInstance.destroy();
-            peerInstance = null;
-          }
-        } catch (e) {}
-        activateLocalHostFallback(true);
-      };
-
-      try {
-        peerInstance = new Peer(peerId, { debug: 0 });
+        peerInstance = new Peer(peerId, { debug: 0, config: PEER_ICE_CONFIG });
       } catch (err) {
         safeFallbackOnce();
         return;
@@ -1574,7 +1261,7 @@
         if (!peerInstance || !peerInstance.open) {
           safeFallbackOnce();
         }
-      }, 3500);
+      }, 4500);
 
       peerInstance.on('open', () => {
         if (fallbackTriggered) return;
@@ -1588,6 +1275,7 @@
 
         lobbyState.roomCode = code;
         lobbyState.isHost = true;
+        lobbyState.isCoHostClient = false;
         lobbyState.hostName = pName;
         lobbyState.joinedPlayers = [];
         hostPeerSessions = [];
@@ -1745,12 +1433,82 @@
       };
 
       let connectTimeout = null;
-      try {
-        peerInstance = new Peer({ debug: 0 });
-      } catch (err) {
-        safeJoinFallback();
-        return;
-      }
+      let attemptCount = 0;
+
+      const attemptPeerConnection = () => {
+        if (joinFallbackTriggered) return;
+        attemptCount += 1;
+        try {
+          if (peerInstance) {
+            try { peerInstance.destroy(); } catch (e) {}
+          }
+          peerInstance = new Peer({ debug: 0, config: PEER_ICE_CONFIG });
+        } catch (err) {
+          safeJoinFallback();
+          return;
+        }
+
+        peerInstance.on('open', () => {
+          if (joinFallbackTriggered) return;
+          try {
+            const conn = peerInstance.connect(targetPeerId, { reliable: true });
+            clientConnection = conn;
+
+            conn.on('open', () => {
+              clearTimeout(connectTimeout);
+              isLocalFallbackMode = false;
+              if (btn) {
+                btn.disabled = false;
+                btn.textContent = '連線並加入房間 →';
+              }
+
+              lobbyState.roomCode = codeInput;
+              lobbyState.isHost = isHostModeCode;
+              lobbyState.isCoHostClient = isHostModeCode;
+
+              try {
+                window.history.replaceState({}, '', buildRoomShareUrl(codeInput));
+              } catch (e) {}
+
+              if (isHostModeCode) {
+                conn.send({
+                  type: 'COHOST_JOIN_REQUEST',
+                  uid: myPlayerUid,
+                  name: pName
+                });
+              } else {
+                conn.send({
+                  type: 'JOIN_REQUEST',
+                  uid: myPlayerUid,
+                  name: pName
+                });
+              }
+            });
+
+            conn.on('data', (data) => handleClientIncomingMessage(data));
+
+            conn.on('close', () => {
+              const headerEl = document.getElementById('game-main-header');
+              if (headerEl && !headerEl.classList.contains('hidden')) {
+                simulateDisconnect();
+              }
+            });
+          } catch (err) {
+            clearTimeout(connectTimeout);
+            safeJoinFallback();
+          }
+        });
+
+        peerInstance.on('error', (err) => {
+          console.warn('Client Peer error / retry:', err);
+          if (err && err.type === 'peer-unavailable' && attemptCount < 2) {
+            setTimeout(attemptPeerConnection, 1200);
+            return;
+          }
+          clearTimeout(connectTimeout);
+          safeJoinFallback();
+        });
+      };
 
       connectTimeout = setTimeout(() => {
         if (!clientConnection || !clientConnection.open) {
@@ -1761,66 +1519,13 @@
           showToast(`找不到房間 [${codeInput}] 或主持人尚未開房！`, 'error');
           cleanupPeerNetwork();
         }
-      }, 9000);
+      }, 12000);
 
-      peerInstance.on('open', () => {
-        if (joinFallbackTriggered) return;
-        try {
-          const conn = peerInstance.connect(targetPeerId, { reliable: true });
-          clientConnection = conn;
-
-          conn.on('open', () => {
-            clearTimeout(connectTimeout);
-            isLocalFallbackMode = false;
-            if (btn) {
-              btn.disabled = false;
-              btn.textContent = '連線並加入房間 →';
-            }
-
-            lobbyState.roomCode = codeInput;
-            lobbyState.isHost = isHostModeCode;
-
-            try {
-              window.history.replaceState({}, '', buildRoomShareUrl(codeInput));
-            } catch (e) {}
-
-            if (isHostModeCode) {
-              conn.send({
-                type: 'COHOST_JOIN_REQUEST',
-                uid: myPlayerUid,
-                name: pName
-              });
-            } else {
-              conn.send({
-                type: 'JOIN_REQUEST',
-                uid: myPlayerUid,
-                name: pName
-              });
-            }
-          });
-
-          conn.on('data', (data) => handleClientIncomingMessage(data));
-
-          conn.on('close', () => {
-            const headerEl = document.getElementById('game-main-header');
-            if (headerEl && !headerEl.classList.contains('hidden')) {
-              simulateDisconnect();
-            }
-          });
-        } catch (err) {
-          clearTimeout(connectTimeout);
-          safeJoinFallback();
-        }
-      });
-
-      peerInstance.on('error', (err) => {
-        clearTimeout(connectTimeout);
-        console.warn('Client Peer error / sandbox restriction:', err);
-        safeJoinFallback();
-      });
+      attemptPeerConnection();
     }
 
     function fillRemainingWithAi() {
+      if (sendCoHostAction('FILL_AI_LOBBY')) return;
       const needed = lobbyState.maxPlayers - lobbyState.joinedPlayers.length;
       if (needed <= 0) {
         showToast('房間人數已滿！', 'info');
@@ -1944,6 +1649,7 @@
     }
 
     function startGameFromLobby() {
+      if (sendCoHostAction('START_GAME')) return;
       if (lobbyState.isHost && lobbyState.joinedPlayers.length < lobbyState.maxPlayers) {
         showToast('人數尚未齊全！', 'error');
         return;
@@ -1951,6 +1657,7 @@
 
       historyStack = [];
       selectedNumber = null;
+      disconnectedPlayersMap = {};
       gameState.roomCode = lobbyState.roomCode;
       gameState.hostUid = myPlayerUid;
       gameState.maxPlayers = lobbyState.maxPlayers;
@@ -1988,13 +1695,13 @@
 
       broadcastStateToAllClients('playing');
 
-      switchMainView('host');
+      switchMainView('host', true);
       showToast(`主持模式已啟動！所有參加者手機已同步進入遊戲`, 'success');
     }
 
     function returnToLobby() {
       if (sendCoHostAction('RETURN_LOBBY')) return;
-      if (lobbyState.isHost) {
+      if (lobbyState.isHost && !lobbyState.isCoHostClient) {
         broadcastStateToAllClients('closed');
       } else if (clientConnection && clientConnection.open) {
         try {
@@ -2003,6 +1710,8 @@
       }
       cleanupPeerNetwork();
       clearDisconnectState();
+      lobbyState.isHost = false;
+      lobbyState.isCoHostClient = false;
       document.getElementById('game-main-header').classList.add('hidden');
       ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
         const el = document.getElementById(id);
@@ -2014,7 +1723,7 @@
     }
 
     // ================= View Navigation & Passcode =================
-    function switchMainView(viewName) {
+    function switchMainView(viewName, fromRemoteSync = false) {
       const views = ['player', 'projector', 'host', 'ai'];
       views.forEach(v => {
         const el = document.getElementById('view-' + v);
@@ -2032,11 +1741,11 @@
         }
       });
       renderAllViews();
-      if (lobbyState.isHost && ['projector', 'host', 'ai'].includes(viewName)) {
-        if (peerInstance && peerInstance.open) {
+      if (!fromRemoteSync && lobbyState.isHost && ['projector', 'host', 'ai'].includes(viewName)) {
+        if (lobbyState.isCoHostClient) {
+          sendCoHostAction('SWITCH_VIEW', { viewName });
+        } else {
           broadcastStateToAllClients();
-        } else if (clientConnection && clientConnection.open) {
-          clientConnection.send({ type: 'HOST_REMOTE_ACTION', action: 'SWITCH_VIEW', viewName });
         }
       }
     }
@@ -2098,9 +1807,116 @@
     }
 
     function manualReconnect() {
+      if (sendCoHostAction('FORCE_RECONNECT_RESUME')) return;
+      if (lobbyState.isHost && !lobbyState.isCoHostClient) {
+        disconnectedPlayersMap = {};
+        clearDisconnectState();
+        showToast('🔄 主持已解除凍結，繼續本回合！', 'success');
+        broadcastStateToAllClients('playing');
+        renderAllViews();
+        return;
+      }
       clearDisconnectState();
       showToast('🔄 已恢復連線，繼續本回合！', 'success');
       renderAllViews();
+    }
+
+    function forceTimeoutToLobby() {
+      if (lobbyState.isHost && !lobbyState.isCoHostClient) {
+        broadcastStateToAllClients('closed');
+      }
+      clearDisconnectState();
+      cleanupPeerNetwork();
+      lobbyState.isHost = false;
+      lobbyState.isCoHostClient = false;
+      document.getElementById('game-main-header').classList.add('hidden');
+      ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      document.getElementById('view-lobby').classList.remove('hidden');
+      backToLobbySelect();
+      showToast('⏰ 連線逾時，已全員返回大廳', 'warning');
+    }
+
+    function getMyPlayerObject() {
+      if (!Array.isArray(gameState.players) || gameState.players.length === 0) return null;
+      const matched = gameState.players.find(p => p.uid === myPlayerUid);
+      if (matched) return matched;
+      return gameState.players.find(p => !p.isAi) || gameState.players[0];
+    }
+
+    function updatePlayerName(newName) {
+      const me = getMyPlayerObject();
+      if (!me) return;
+      const trimmed = (newName || '').trim();
+      if (!trimmed) return;
+      me.name = trimmed;
+      renderAllViews();
+      sendPlayerActionToHost(me);
+    }
+
+    function sendPlayerActionToHost(me) {
+      if (!me) return;
+      const payload = {
+        type: 'PLAYER_ACTION',
+        uid: myPlayerUid,
+        playerId: me.id,
+        name: me.name,
+        choice: me.choice,
+        locked: Boolean(me.locked)
+      };
+      if (lobbyState.isHost && !lobbyState.isCoHostClient) {
+        broadcastStateToAllClients('playing');
+      } else if (clientConnection && clientConnection.open) {
+        try {
+          clientConnection.send(payload);
+        } catch (e) {}
+      }
+    }
+
+    // ================= Disconnect Pause & 10-Min Timeout =================
+    function applyGlobalFreezeOverlay(namesList = ['玩家'], secondsRemaining = 600) {
+      disconnectSecondsLeft = Math.max(0, Math.floor(secondsRemaining));
+      const overlay = document.getElementById('disconnect-overlay');
+      if (overlay) {
+        const titleEl = overlay.querySelector('h2');
+        const descEl = overlay.querySelector('p');
+        if (titleEl) {
+          titleEl.textContent = `📡 ${namesList.join('、')} 斷線 · 全場已凍結`;
+        }
+        if (descEl) {
+          descEl.textContent = '系統偵測到有玩家斷線，全場畫面已暫停。該玩家可在 10 分鐘內使用原名稱重新輸入房號加入並恢復斷線前進度；若超時未重連，全員將自動返回大廳。';
+        }
+        overlay.classList.remove('hidden');
+      }
+      updateDisconnectTimerDisplay();
+
+      if (!isDisconnected) {
+        isDisconnected = true;
+        disconnectInterval = setInterval(() => {
+          disconnectSecondsLeft -= 1;
+          updateDisconnectTimerDisplay();
+          if (disconnectSecondsLeft <= 0) {
+            forceTimeoutToLobby();
+          }
+        }, 1000);
+      }
+    }
+
+    function simulateDisconnect() {
+      if (sendCoHostAction('SIMULATE_DISCONNECT')) return;
+      if (lobbyState.isHost && !lobbyState.isCoHostClient) {
+        disconnectedPlayersMap['sim_disconnect'] = {
+          uid: 'sim_disconnect',
+          name: '測試連線玩家',
+          disconnectedAt: Date.now()
+        };
+        applyGlobalFreezeOverlay(['測試連線玩家'], 600);
+        broadcastStateToAllClients('playing');
+        return;
+      }
+      applyGlobalFreezeOverlay(['本機連線'], 600);
     }
 
     function forceTimeoutToLobby() {
@@ -2259,13 +2075,14 @@
     }
 
     // ================= Host Round Controls (Supports Co-Host Remote Relay) =================
-    function sendCoHostAction(actionName) {
-      if (!lobbyState.isHost) return false;
-      if (peerInstance && !peerInstance.open && clientConnection && clientConnection.open) {
-        clientConnection.send({ type: 'HOST_REMOTE_ACTION', action: actionName });
-        return true;
+    function sendCoHostAction(actionName, extraData = {}) {
+      if (!lobbyState.isHost || !lobbyState.isCoHostClient) return false;
+      if (clientConnection && clientConnection.open) {
+        clientConnection.send({ type: 'HOST_REMOTE_ACTION', action: actionName, ...extraData });
+      } else {
+        showToast('與主機連線已中斷，無法同步操作！', 'error');
       }
-      return false;
+      return true;
     }
 
     function revealAndCalculateRound() {
@@ -2608,24 +2425,24 @@
           <div class="flex flex-col items-center relative transition-all
             ${p.eliminated ? 'opacity-35 grayscale' : ''}">
 
-            <div class="w-full max-w-[140px] flex items-end justify-between mb-1 min-h-[28px]">
+            <div class="w-full max-w-[160px] flex items-end justify-between mb-1.5 min-h-[34px]">
               <div>
-                ${isWinner ? '<span class="font-number text-lg sm:text-2xl font-black text-white tracking-tight leading-none">WIN</span>' : ''}
+                ${isWinner ? '<span class="font-number text-xl sm:text-3xl font-black text-white tracking-tight leading-none">WIN</span>' : ''}
               </div>
-              <div class="text-right leading-none">
-                <span class="text-[10px] font-bold text-zinc-400 mr-1">分</span>
-                <span class="font-number text-xl sm:text-2xl font-black ${scoreColor}">${p.score}</span>
+              <div class="text-right leading-none flex items-baseline gap-0.5">
+                <span class="font-number text-2xl sm:text-3xl font-black ${scoreColor}">${p.score}</span>
+                <span class="text-2xl sm:text-3xl font-black ${scoreColor}">分</span>
               </div>
             </div>
 
-            <div class="w-full max-w-[140px] aspect-square p-1 bg-zinc-900 ${isWinner ? 'border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.65)]' : 'border border-zinc-600'} relative">
+            <div class="w-full max-w-[160px] aspect-square p-1 bg-zinc-900 ${isWinner ? 'border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.65)]' : 'border border-zinc-600'} relative">
               <img src="${p.avatar}" alt="${p.name}" class="w-full h-full object-cover" />
               ${isInvalid ? '<div class="absolute inset-0 bg-black/75 flex items-center justify-center text-red-400 font-black text-xs">同數作廢</div>' : ''}
             </div>
 
-            <div class="text-xs font-bold text-zinc-300 truncate max-w-[140px] mt-1.5">${p.name}</div>
+            <div class="text-lg sm:text-2xl font-black text-white truncate max-w-[170px] mt-2 tracking-wide drop-shadow">${p.name}</div>
 
-            <div class="beige-card-box w-full max-w-[140px] h-16 sm:h-20 mt-2 rounded-sm flex items-center justify-center">
+            <div class="beige-card-box w-full max-w-[160px] h-16 sm:h-20 mt-2 rounded-sm flex items-center justify-center">
               ${numberBoxContent}
             </div>
           </div>
@@ -2662,8 +2479,7 @@
             ${isOut ? 'bg-zinc-950/60 border-zinc-800/60 opacity-40 grayscale' : p.locked ? 'bg-zinc-900 border-emerald-600/70' : 'bg-zinc-900/70 border-zinc-800'}">
             <div class="min-w-0">
               <div class="flex items-center gap-1.5">
-                <span class="font-number text-xs font-bold text-zinc-500">P${p.id + 1}</span>
-                <span class="font-bold text-xs sm:text-sm text-white truncate">${p.name}</span>
+                <span class="font-bold text-sm sm:text-base text-white truncate">${p.name}</span>
               </div>
               <div class="text-xs mt-1">
                 分數：<strong class="font-number ${isOut ? 'text-red-500' : 'text-amber-400'}">${p.score} 分</strong>
