@@ -167,8 +167,8 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button id="btn-home-join" type="button" onclick="showJoinRoomForm()"
-            class="group p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-emerald-500 text-left transition flex flex-col justify-between cursor-pointer">
+          <button type="button" onclick="showJoinRoomForm()"
+            class="group p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-emerald-500 text-left transition flex flex-col justify-between">
             <div class="w-12 h-12 rounded-xl bg-emerald-950/80 border border-emerald-700/60 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
               🚪
             </div>
@@ -179,8 +179,8 @@
           </button>
 
           <div class="flex flex-col gap-3">
-            <button id="btn-home-create" type="button" onclick="showCreateRoomForm()"
-              class="group flex-1 p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-amber-500 text-left transition flex flex-col justify-between cursor-pointer">
+            <button type="button" onclick="showCreateRoomForm()"
+              class="group flex-1 p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border-2 border-zinc-700 hover:border-amber-500 text-left transition flex flex-col justify-between">
               <div class="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-700/60 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
                 👑
               </div>
@@ -190,8 +190,8 @@
               </div>
             </button>
 
-            <button id="btn-home-cohost" type="button" onclick="openCoHostJoinForm()"
-              class="w-full px-4 py-3 rounded-xl bg-amber-950/35 hover:bg-amber-900/50 border border-amber-600/50 text-left transition flex items-center justify-between gap-2 cursor-pointer">
+            <button type="button" onclick="openCoHostJoinForm()"
+              class="w-full px-4 py-3 rounded-xl bg-amber-950/35 hover:bg-amber-900/50 border border-amber-600/50 text-left transition flex items-center justify-between gap-2">
               <div>
                 <div class="text-xs sm:text-sm font-black text-amber-300">🎙️ 協作主持進入</div>
                 <div class="text-[11px] text-zinc-400">最多 2 人 · 輸入 4 位數房號入後台</div>
@@ -1251,371 +1251,6 @@
 
     function playProjectorLockSound() {
       try {
-        ensureAudioCtx();
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(520, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.12);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.14);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.15);
-      } catch (e) {}
-    }
-
-    function playRevealSound() {
-      try {
-        ensureAudioCtx();
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(160, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(65, audioCtx.currentTime + 0.45);
-        gain.gain.setValueAtTime(0.22, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.48);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.5);
-      } catch (e) {}
-    }
-
-    function toggleBGM() {
-      bgmPlaying = !bgmPlaying;
-      const btn = document.getElementById('btn-bgm-toggle');
-      if (btn) {
-        btn.textContent = bgmPlaying ? '🔊 緊張音效：開' : '🔇 緊張音效：關';
-      }
-      if (bgmPlaying) {
-        ensureAudioCtx();
-        if (bgmTimer) clearInterval(bgmTimer);
-        bgmTimer = setInterval(() => {
-          if (!bgmPlaying || !audioCtx) return;
-          try {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(85, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.24);
-          } catch (e) {}
-        }, 900);
-      } else if (bgmTimer) {
-        clearInterval(bgmTimer);
-        bgmTimer = null;
-      }
-    }
-
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toast-container');
-      if (!container) return;
-      const colors = {
-        info: 'bg-zinc-900 border-zinc-700 text-zinc-100',
-        success: 'bg-emerald-950/95 border-emerald-500 text-emerald-200',
-        warning: 'bg-amber-950/95 border-amber-500 text-amber-200',
-        error: 'bg-red-950/95 border-red-500 text-red-200'
-      };
-      const el = document.createElement('div');
-      el.className = `pointer-events-auto px-4 py-3 rounded-xl border text-xs sm:text-sm font-bold shadow-2xl transition-all duration-300 ${colors[type] || colors.info}`;
-      el.textContent = message;
-      container.appendChild(el);
-      setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-6px)';
-        setTimeout(() => el.remove(), 300);
-      }, 3600);
-    }
-
-    function createDefaultAvatar(index, badgeText) {
-      const palettes = [
-        ['#1e293b', '#38bdf8'],
-        ['#31102f', '#f472b6'],
-        ['#14291e', '#34d399'],
-        ['#2e1a0f', '#fbbf24'],
-        ['#231942', '#a78bfa'],
-        ['#2b1212', '#f87171'],
-        ['#0f292e', '#22d3ee'],
-        ['#262626', '#d4d4d8']
-      ];
-      const [bg, fg] = palettes[(index - 1) % palettes.length];
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-        <rect width="240" height="240" fill="${bg}"/>
-        <circle cx="120" cy="88" r="42" fill="${fg}" fill-opacity="0.28" stroke="${fg}" stroke-width="4"/>
-        <path d="M52 212 C52 162, 188 162, 188 212" fill="${fg}" fill-opacity="0.22" stroke="${fg}" stroke-width="4"/>
-        <text x="120" y="132" text-anchor="middle" fill="#ffffff" font-family="monospace" font-weight="900" font-size="36">${badgeText}</text>
-      </svg>`;
-      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-    }
-
-    function computeRoundOutcome(playersList, maxPlayersMode) {
-      const cfg = MODE_CONFIGS[maxPlayersMode] || MODE_CONFIGS[8];
-      const alive = playersList.filter(p => !p.eliminated && p.choice !== null);
-      const aliveCount = alive.length;
-      const duplicateRuleActive = aliveCount <= cfg.duplicateThreshold;
-      const precisionRuleActive = aliveCount <= cfg.precisionThreshold;
-
-      const freq = {};
-      alive.forEach(p => {
-        freq[p.choice] = (freq[p.choice] || 0) + 1;
-      });
-
-      const invalidNumbers = [];
-      if (duplicateRuleActive) {
-        Object.keys(freq).forEach(numStr => {
-          if (freq[numStr] > 1) {
-            invalidNumbers.push(Number(numStr));
-          }
-        });
-      }
-
-      const validPlayers = alive.filter(p => !invalidNumbers.includes(p.choice));
-      const allNums = alive.map(p => p.choice);
-      const sum = allNums.reduce((acc, n) => acc + n, 0);
-      const avg = aliveCount > 0 ? sum / aliveCount : 0;
-      const answer = Number((avg * 0.8).toFixed(2));
-
-      if (validPlayers.length === 0) {
-        return {
-          avg,
-          answer,
-          winnerIds: [],
-          invalidNumbers,
-          penalty: 1,
-          notice: `⚠️ 同數無效生效：所有數字均重複作廢，本回合無人勝出，全員扣 1 分！`
-        };
-      }
-
-      let minDiff = Infinity;
-      validPlayers.forEach(p => {
-        const diff = Math.abs(p.choice - answer);
-        if (diff < minDiff) minDiff = diff;
-      });
-
-      const winnerIds = validPlayers
-        .filter(p => Math.abs(Math.abs(p.choice - answer) - minDiff) < 0.0001)
-        .map(p => p.id);
-
-      const isPrecisionHit = precisionRuleActive && minDiff <= 1.0;
-      const penalty = isPrecisionHit ? 2 : 1;
-      const winnerNames = validPlayers.filter(p => winnerIds.includes(p.id)).map(p => p.name).join('、');
-
-      let notice = `🏆 勝出者：${winnerNames}（目標 ${answer.toFixed(2)}，誤差 ${minDiff.toFixed(2)}）`;
-      if (invalidNumbers.length > 0) {
-        notice += ` ｜ 🚫 同數作廢：[${invalidNumbers.join(', ')}]`;
-      }
-      if (isPrecisionHit) {
-        notice += ` ｜ 💥 精準重擊觸發（誤差 ≤ 1）：落敗者扣 2 分！`;
-      }
-
-      return {
-        avg,
-        answer,
-        winnerIds,
-        invalidNumbers,
-        penalty,
-        notice
-      };
-    }
-
-    function buildRoomShareUrl(code) {
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('request_room', code);
-        url.searchParams.delete('room');
-        return url.toString();
-      } catch (e) {
-        return `${window.location.origin}${window.location.pathname}?request_room=${encodeURIComponent(code)}`;
-      }
-    }
-
-    function copyRoomInviteLink() {
-      const input = document.getElementById('shareable-room-url-input');
-      const link = input ? input.value : buildRoomShareUrl(lobbyState.roomCode);
-      if (input) {
-        input.select();
-        input.setSelectionRange(0, 99999);
-      }
-      try {
-        document.execCommand('copy');
-        showToast('📋 已複製專屬邀請連結！傳送給其他手機即可直接加入', 'success');
-      } catch (e) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(link).then(() => {
-            showToast('📋 已複製專屬邀請連結！', 'success');
-          }).catch(() => {
-            showToast('請手動長按上方網址複製', 'info');
-          });
-        }
-      }
-    }
-
-    function generateRoomCode() {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let result = '';
-      for (let i = 0; i < 4; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return result;
-    }
-
-    function backToLobbySelect() {
-      document.getElementById('lobby-step-join').classList.add('hidden');
-      document.getElementById('lobby-step-create').classList.add('hidden');
-      document.getElementById('lobby-step-waiting').classList.add('hidden');
-      document.getElementById('lobby-step-select').classList.remove('hidden');
-    }
-
-    function showJoinRoomForm() {
-      const titleEl = document.getElementById('join-form-title');
-      const labelEl = document.getElementById('join-code-label');
-      const helperEl = document.getElementById('join-code-helper');
-      const codeInputEl = document.getElementById('join-room-code-input');
-      if (titleEl) titleEl.textContent = '🚪 加入現有房間';
-      if (labelEl) labelEl.textContent = '輸入 4 位數房間代碼（額外主持裝置可加 -HOST）';
-      if (helperEl) helperEl.textContent = '一般參賽者請輸入主持人提供的 4 位數房間代碼。';
-      if (codeInputEl) {
-        codeInputEl.dataset.forceCoHost = '';
-        codeInputEl.placeholder = '例如：8492 或 8492-HOST';
-      }
-      document.getElementById('lobby-step-select').classList.add('hidden');
-      document.getElementById('lobby-step-create').classList.add('hidden');
-      document.getElementById('lobby-step-waiting').classList.add('hidden');
-      document.getElementById('lobby-step-join').classList.remove('hidden');
-      if (codeInputEl) codeInputEl.focus();
-    }
-
-    function openCoHostJoinForm() {
-      const titleEl = document.getElementById('join-form-title');
-      const labelEl = document.getElementById('join-code-label');
-      const helperEl = document.getElementById('join-code-helper');
-      const codeInputEl = document.getElementById('join-room-code-input');
-      if (titleEl) titleEl.textContent = '🎙️ 協作主持進入後台（最多 2 人）';
-      if (labelEl) labelEl.textContent = '輸入主持人的 4 位數房間代碼';
-      if (helperEl) helperEl.textContent = '驗證房號後將直接進入主持控台，所有操作即時同步全場。';
-      if (codeInputEl) {
-        codeInputEl.dataset.forceCoHost = '1';
-        codeInputEl.placeholder = '輸入 4 位數房號...';
-      }
-      document.getElementById('lobby-step-select').classList.add('hidden');
-      document.getElementById('lobby-step-create').classList.add('hidden');
-      document.getElementById('lobby-step-waiting').classList.add('hidden');
-      document.getElementById('lobby-step-join').classList.remove('hidden');
-      if (codeInputEl) codeInputEl.focus();
-    }
-
-    function quickJoinDetectedRoom() {
-      const detectedCode = (document.getElementById('url-detected-code')?.textContent || '').trim();
-      const codeInput = document.getElementById('join-room-code-input');
-      if (codeInput && detectedCode && detectedCode !== '----') {
-        codeInput.value = detectedCode;
-        codeInput.dataset.forceCoHost = '';
-      }
-      confirmJoinRoom();
-    }
-
-    function showCreateRoomForm() {
-      document.getElementById('lobby-step-select').classList.add('hidden');
-      document.getElementById('lobby-step-join').classList.add('hidden');
-      document.getElementById('lobby-step-waiting').classList.add('hidden');
-      document.getElementById('lobby-step-create').classList.remove('hidden');
-      selectRoomMode(lobbyState.maxPlayers || 8);
-    }
-
-    function selectRoomMode(modeNum) {
-      lobbyState.maxPlayers = modeNum;
-      const cfg = MODE_CONFIGS[modeNum] || MODE_CONFIGS[8];
-      document.querySelectorAll('.mode-option-btn').forEach(btn => {
-        const m = Number(btn.getAttribute('data-mode'));
-        if (m === modeNum) {
-          btn.className = 'mode-option-btn py-3 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-amber-300 font-black text-sm transition';
-        } else {
-          btn.className = 'mode-option-btn py-3 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-300 font-bold text-sm hover:border-amber-500 transition';
-        }
-      });
-      const previewEl = document.getElementById('create-mode-rules-preview');
-      if (previewEl) {
-        previewEl.innerHTML = `
-          <div class="font-bold text-amber-400">📋 ${modeNum} 人局平衡規則門檻：</div>
-          <div>• 基礎規則：全場平均數 × 0.8，最接近者勝出（其餘扣 1 分）</div>
-          <div>• 【同數無效】解鎖條件：存活人數 ≤ <span class="text-white font-bold">${cfg.duplicateThreshold} 人</span></div>
-          <div>• 【精準重擊】解鎖條件：存活人數 ≤ <span class="text-red-400 font-bold">${cfg.precisionThreshold} 人</span>（誤差 ≤ 1 使對手扣 2 分）</div>
-        `;
-      }
-    }
-
-    function confirmCreateRoom() {
-      const btn = document.getElementById('btn-confirm-create');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '⏳ 正在建立房間與 P2P 連線節點...';
-      }
-
-      cleanupPeerNetwork();
-
-      const pName = document.getElementById('lobby-player-name').value.trim() || '主持人';
-      const code = generateRoomCode();
-      const peerId = PEER_PREFIX + code;
-
-      let fallbackTriggered = false;
-      const safeFallbackOnce = () => {
-        if (fallbackTriggered) return;
-        fallbackTriggered = true;
-        isLocalFallbackMode = true;
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = '建立房間與專屬分享連結 →';
-        }
-        lobbyState.roomCode = code;
-        lobbyState.isHost = true;
-        lobbyState.isCoHostClient = false;
-        lobbyState.hostName = pName;
-        lobbyState.joinedPlayers = [];
-        hostPeerSessions = [];
-
-        registerLocalRoom(code, lobbyState.maxPlayers, pName);
-        ensureLocalChannel(code, (msg) => {
-          if (!msg || !msg.type || msg.senderUid === myPlayerUid) return;
-          const virtualSession = {
-            conn: {
-              open: true,
-              send: (outData) => sendLocalChannelMessage({ ...outData, targetUid: msg.uid, senderUid: myPlayerUid })
-            },
-            role: 'participant',
-            uid: msg.uid || null,
-            name: msg.name || ''
-          };
-          handleHostIncomingMessage(virtualSession, msg);
-        });
-
-        try {
-          const shareUrl = buildRoomShareUrl(code);
-          window.history.replaceState({}, '', shareUrl);
-          const linkInput = document.getElementById('shareable-room-url-input');
-          if (linkInput) linkInput.value = shareUrl;
-        } catch (e) {}
-
-        document.getElementById('lobby-step-create').classList.add('hidden');
-        document.getElementById('lobby-step-waiting').classList.remove('hidden');
-        renderWaitingRoom();
-        updateConnectionBadge('本機同源同步模式已就緒（沙盒備援）', true);
-        showToast(`✅ 房間 [${code}] 已建立（本機同源同步模式）`, 'success');
-      };
-
-      if (typeof Peer === 'undefined') {
-        safeFallbackOnce();
-        return;
-      }
-
-      try {
         peerInstance = new Peer(peerId, { debug: 0, config: PEER_ICE_CONFIG });
       } catch (err) {
         safeFallbackOnce();
@@ -2284,6 +1919,73 @@
       applyGlobalFreezeOverlay(['本機連線'], 600);
     }
 
+    function forceTimeoutToLobby() {
+      clearDisconnectState();
+      cleanupPeerNetwork();
+      document.getElementById('game-main-header').classList.add('hidden');
+      ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      document.getElementById('view-lobby').classList.remove('hidden');
+      backToLobbySelect();
+      showToast('⏰ 連線逾時，已返回大廳', 'warning');
+    }
+
+    function getMyPlayerObject() {
+      if (!Array.isArray(gameState.players) || gameState.players.length === 0) return null;
+      const matched = gameState.players.find(p => p.uid === myPlayerUid);
+      if (matched) return matched;
+      return gameState.players.find(p => !p.isAi) || gameState.players[0];
+    }
+
+    function updatePlayerName(newName) {
+      const me = getMyPlayerObject();
+      if (!me) return;
+      const trimmed = (newName || '').trim();
+      if (!trimmed) return;
+      me.name = trimmed;
+      renderAllViews();
+      sendPlayerActionToHost(me);
+    }
+
+    function sendPlayerActionToHost(me) {
+      if (!me) return;
+      const payload = {
+        type: 'PLAYER_ACTION',
+        uid: myPlayerUid,
+        playerId: me.id,
+        name: me.name,
+        choice: me.choice,
+        locked: Boolean(me.locked)
+      };
+      if (lobbyState.isHost) {
+        broadcastStateToAllClients('playing');
+      } else if (clientConnection && clientConnection.open) {
+        try {
+          clientConnection.send(payload);
+        } catch (e) {}
+      }
+    }
+
+    // ================= Disconnect Pause & 10-Min Timeout =================
+    function simulateDisconnect() {
+      if (sendCoHostAction('SIMULATE_DISCONNECT')) return;
+      if (isDisconnected) return;
+      isDisconnected = true;
+      disconnectSecondsLeft = 600;
+      document.getElementById('disconnect-overlay').classList.remove('hidden');
+      updateDisconnectTimerDisplay();
+
+      disconnectInterval = setInterval(() => {
+        disconnectSecondsLeft -= 1;
+        updateDisconnectTimerDisplay();
+        if (disconnectSecondsLeft <= 0) {
+          forceTimeoutToLobby();
+        }
+      }, 1000);
+    }
+
     function selectNumber(num) {
       if (isDisconnected) return;
       const me = getMyPlayerObject();
@@ -2837,32 +2539,8 @@
     }
 
     // ================= Initialization & URL Room Parameter Check =================
-    function bindLobbyAndSafetyEvents() {
-      const overlay = document.getElementById('disconnect-overlay');
-      const pwdModal = document.getElementById('password-modal');
-      if (overlay && !isDisconnected) overlay.classList.add('hidden');
-      if (pwdModal) pwdModal.classList.add('hidden');
-
-      const btnJoin = document.getElementById('btn-home-join');
-      const btnCreate = document.getElementById('btn-home-create');
-      const btnCohost = document.getElementById('btn-home-cohost');
-      if (btnJoin) btnJoin.onclick = () => showJoinRoomForm();
-      if (btnCreate) btnCreate.onclick = () => showCreateRoomForm();
-      if (btnCohost) btnCohost.onclick = () => openCoHostJoinForm();
-    }
-
     (function init() {
       try {
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', bindLobbyAndSafetyEvents);
-        } else {
-          bindLobbyAndSafetyEvents();
-        }
-
-        window.addEventListener('error', (event) => {
-          console.error('Runtime error caught:', event?.error || event?.message);
-        });
-
         window.addEventListener('unhandledrejection', (event) => {
           const reasonMsg = String(event?.reason?.message || event?.reason || '');
           if (reasonMsg.includes('WebSocket') || reasonMsg.includes('SecurityError') || reasonMsg.includes('peerjs')) {
