@@ -2318,52 +2318,6 @@
       const myName = (me && me.name) ? me.name : (document.getElementById('lobby-player-name')?.value.trim() || '本機連線');
       applyGlobalFreezeOverlay([myName], 600);
     }
-        if (titleEl) {
-          titleEl.textContent = cleanNames.length > 1
-            ? `📡 共有 ${cleanNames.length} 位玩家斷線 · 畫面已凍結`
-            : `📡 有人斷線（${cleanNames[0]}）· 畫面已凍結`;
-        }
-        if (namesContainer) {
-          namesContainer.innerHTML = cleanNames.map(n => `
-            <span class="px-3 py-1 rounded-full bg-red-950/90 border border-red-500/80 text-red-200 font-black text-xs sm:text-sm">
-              ⚠️ ${n}
-            </span>
-          `).join('');
-        }
-        if (descEl) {
-          descEl.textContent = `目前有 ${cleanNames.length} 位玩家斷線，其他人畫面已凍結並不會被踢出房間。請斷線玩家輸入房號 [${activeCode}] 重新加入即可自動解除凍結！`;
-        }
-        overlay.classList.remove('hidden');
-      }
-      updateDisconnectTimerDisplay();
-
-      if (!isDisconnected) {
-        isDisconnected = true;
-        disconnectInterval = setInterval(() => {
-          disconnectSecondsLeft = Math.max(0, disconnectSecondsLeft - 1);
-          updateDisconnectTimerDisplay();
-          if (disconnectSecondsLeft <= 0) {
-            const labelEl = document.getElementById('disconnect-countdown');
-            if (labelEl) labelEl.textContent = '00:00 (已逾 10 分鐘，仍凍結等待重連)';
-          }
-        }, 1000);
-      }
-    }
-
-    function simulateDisconnect() {
-      if (sendCoHostAction('SIMULATE_DISCONNECT')) return;
-      if (lobbyState.isHost && !lobbyState.isCoHostClient) {
-        disconnectedPlayersMap['sim_disconnect'] = {
-          uid: 'sim_disconnect',
-          name: '測試連線玩家',
-          disconnectedAt: Date.now()
-        };
-        applyGlobalFreezeOverlay(['測試連線玩家'], 600);
-        broadcastStateToAllClients('playing');
-        return;
-      }
-      applyGlobalFreezeOverlay(['本機連線'], 600);
-    }
 
     function selectNumber(num) {
       if (isDisconnected) return;
