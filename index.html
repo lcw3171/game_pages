@@ -105,9 +105,13 @@
       <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">10 分鐘重連等待倒數</div>
       <div id="disconnect-countdown" class="font-number text-4xl font-black text-amber-400">10:00</div>
     </div>
-    <p class="text-xs text-zinc-400">
+    <p class="text-xs text-zinc-400 mb-5">
       斷線玩家重新輸入房號加入後，系統會自動解除凍結並恢復原有遊戲進度。
     </p>
+    <button type="button" onclick="returnToLobby()"
+      class="px-6 py-3 rounded-2xl bg-red-950/90 hover:bg-red-900 text-red-200 border border-red-700/80 font-black text-sm shadow-lg transition">
+      🏠 返回大廳
+    </button>
   </div>
 
   <!-- Host Passcode Modal -->
@@ -396,21 +400,21 @@
 
         <div id="player-rule-item-prec" class="p-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800 flex items-start justify-between gap-2 transition">
           <div>
-            <div id="player-rule-prec-title" class="font-bold text-zinc-400">3. 精準重擊（存活 ≤ 3 人解鎖）</div>
-            <div class="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
-              當存活人數降至指定門檻或以下且勝出者與目標誤差 <strong class="text-amber-300">≤ 1.0</strong> 時，觸發精準重擊，所有落敗者改為扣 <strong class="text-red-400">2 分</strong>！
-            </div>
-          </div>
-          <span id="player-rule-prec-badge" class="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-500 font-black text-[10px] shrink-0">未生效</span>
-        </div>
+    <!-- Eliminated Banner & Spectator Live Board (if player is OUT) -->
+    <div id="player-eliminated-banner" class="hidden flex flex-col gap-3 my-2">
+      <div class="glass-panel rounded-2xl p-5 text-center border-2 border-red-700/80">
+        <div class="text-3xl mb-1.5">💀</div>
+        <h2 class="text-xl sm:text-2xl font-black text-red-500 mb-1">你已被淘汰 (OUT) · 進入觀眾觀戰視角</h2>
+        <p class="text-xs text-zinc-400">你的生命分數已歸零，現在可以即時觀看場上存活玩家鎖定的數字與戰況。</p>
       </div>
-    </div>
 
-    <!-- Eliminated Banner (if player is OUT) -->
-    <div id="player-eliminated-banner" class="hidden glass-panel rounded-2xl p-6 text-center border-2 border-red-700/80 my-4">
-      <div class="text-4xl mb-2">💀</div>
-      <h2 class="text-2xl font-black text-red-500 mb-1">你已被淘汰 (OUT)</h2>
-      <p class="text-xs text-zinc-400">你的生命分數已歸零，請觀戰直至本局結束。</p>
+      <div class="glass-panel rounded-2xl p-4 border border-amber-500/40">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs sm:text-sm font-black text-amber-400">👁️ 觀眾觀戰即時面板（存活玩家鎖定數字）</span>
+          <span id="spectator-alive-count" class="font-number text-xs text-zinc-400">存活：-- 人</span>
+        </div>
+        <div id="spectator-players-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+      </div>
     </div>
 
     <!-- Round Result Banner for Player (when revealed) -->
@@ -2579,7 +2583,48 @@
         elimBanner.classList.remove('hidden');
         padWrapper.classList.add('hidden');
         lockBtn.classList.add('hidden');
-        return;
+
+        const specCountEl = document.getElementById('spectator-alive-count');
+        const specGridEl = document.getElementById('spectator-players-grid');
+        if (specCountEl) {
+          specCountEl.textContent = `存活：${aliveCount} / ${gameState.maxPlayers} 人`;
+        }
+        if (specGridEl) {
+          specGridEl.innerHTML = gameState.players.map(p => {
+            const isWin = gameState.phase === 'revealed' && gameState.winnerIds.includes(p.id);
+            const isInvalid = gameState.phase === 'revealed' && gameState.invalidNumbers.includes(p.choice);
+            let numDisplay = '--';
+            let statusText = '選號中...';
+            let statusClass = 'text-zinc-500';
+
+            if (p.eliminated) {
+              numDisplay = 'OUT';
+              statusText = '已淘汰';
+              statusClass = 'text-red-500';
+            } else if (p.locked || gameState.phase === 'revealed') {
+              numDisplay = p.choice !== null ? p.choice : '--';
+              statusText = gameState.phase === 'revealed'
+                ? (isInvalid ? '同數作廢' : isWin ? '本回合勝出' : '已開牌')
+                : '已鎖定 (LOCK)';
+              statusClass = isInvalid ? 'text-red-400' : 'text-emerald-400 font-bold';
+            }
+
+            return `
+              <div class="p-3 rounded-xl border flex flex-col justify-between ${p.eliminated ? 'bg-zinc-950/60 border-zinc-800/60 opacity-40 grayscale' : isWin ? 'bg-amber-950/30 border-amber-500' : p.locked ? 'bg-zinc-900 border-emerald-600/70' : 'bg-zinc-900/70 border-zinc-800'}">
+                <div class="flex items-center justify-between gap-1 mb-1.5">
+                  <span class="text-xs font-bold text-white truncate">${p.name}</span>
+                  <span class="font-number text-xs font-black ${p.eliminated ? 'text-zinc-500' : 'text-amber-400'}">${p.score}分</span>
+                </div>
+                <div class="text-center py-2 rounded-lg bg-zinc-950/90 border border-zinc-800/80 my-1">
+                  <span class="font-number text-2xl font-black ${p.eliminated ? 'text-red-700' : isInvalid ? 'line-through text-zinc-500' : p.locked || gameState.phase === 'revealed' ? 'text-amber-400' : 'text-zinc-600'}">
+                    ${numDisplay}
+                  </span>
+                </div>
+                <div class="text-[10px] text-center mt-1 ${statusClass}">${statusText}</div>
+              </div>
+            `;
+          }).join('');
+        }
       } else {
         elimBanner.classList.add('hidden');
         padWrapper.classList.remove('hidden');
