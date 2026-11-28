@@ -406,6 +406,16 @@
 
         <div id="player-rule-item-prec" class="p-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800 flex items-start justify-between gap-2 transition">
           <div>
+            <div id="player-rule-prec-title" class="font-bold text-zinc-400">3. 精準重擊（存活 ≤ 3 人解鎖）</div>
+            <div class="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
+              當存活人數降至指定門檻或以下時，若勝出者選號與目標答案的誤差 <strong class="text-red-400">≤ 1</strong>，所有落敗者改為重扣 <strong class="text-red-400">2 分</strong>！
+            </div>
+          </div>
+          <span id="player-rule-prec-badge" class="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-500 font-black text-[10px] shrink-0">未生效</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Eliminated Banner & Spectator Live Board (if player is OUT) -->
     <div id="player-eliminated-banner" class="hidden flex flex-col gap-3 my-2">
       <div class="glass-panel rounded-2xl p-5 text-center border-2 border-red-700/80">
@@ -1243,7 +1253,7 @@
 
     // ================= Mode Configurations =================
     const MODE_CONFIGS = {
-      5: { duplicateThreshold: 4, precisionThreshold: 2 },
+      5: { duplicateThreshold: 4, precisionThreshold: 3 },
       6: { duplicateThreshold: 4, precisionThreshold: 3 },
       7: { duplicateThreshold: 5, precisionThreshold: 3 },
       8: { duplicateThreshold: 5, precisionThreshold: 3 },
