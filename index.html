@@ -93,25 +93,31 @@
   <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
   <!-- Disconnect / Pause Overlay -->
-  <div id="disconnect-overlay" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-    <div class="w-20 h-20 rounded-full bg-red-950/80 border-2 border-red-500 flex items-center justify-center mb-5 animate-pulse">
-      <span class="text-4xl">📡</span>
+  <div id="disconnect-overlay" class="hidden fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-950/80 border-2 border-red-500 flex items-center justify-center mb-4 animate-pulse">
+      <span class="text-3xl sm:text-4xl">📡</span>
     </div>
-    <h2 class="text-2xl sm:text-3xl font-black text-red-400 tracking-wider mb-2">連線中斷 · 本回合已暫停</h2>
-    <p class="text-zinc-300 text-sm sm:text-base max-w-md mb-6">
-      系統偵測到連線中斷，已自動凍結當前選號與倒數狀態。請檢查網路並等待重新連線。
+    <div class="px-4 py-1.5 rounded-full bg-zinc-900 border border-amber-500/60 text-xs sm:text-sm font-bold text-zinc-300 mb-3">
+      當前房間代碼：<span id="disconnect-room-code" class="font-number text-lg sm:text-xl font-black text-amber-400 tracking-widest ml-1">----</span>
+    </div>
+    <h2 id="disconnect-overlay-title" class="text-xl sm:text-3xl font-black text-red-400 tracking-wider mb-3">連線中斷 · 本回合已暫停</h2>
+    <div id="disconnect-names-list" class="flex flex-wrap items-center justify-center gap-2 mb-4 max-w-lg"></div>
+    <p id="disconnect-overlay-desc" class="text-zinc-300 text-xs sm:text-sm max-w-md mb-5 leading-relaxed">
+      目前有人斷線，全場畫面已凍結。斷線玩家請使用上方房號重新加入即可自動解除凍結！
     </p>
-    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl px-8 py-4 mb-6">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl px-8 py-4 mb-4">
       <div class="text-xs text-zinc-400 uppercase tracking-widest mb-1">10 分鐘重連等待倒數</div>
       <div id="disconnect-countdown" class="font-number text-4xl font-black text-amber-400">10:00</div>
     </div>
-    <p class="text-xs text-zinc-400 mb-5">
+    <p class="text-xs text-zinc-400 mb-6">
       斷線玩家重新輸入房號加入後，系統會自動解除凍結並恢復原有遊戲進度。
     </p>
-    <button type="button" onclick="returnToLobby()"
-      class="px-6 py-3 rounded-2xl bg-red-950/90 hover:bg-red-900 text-red-200 border border-red-700/80 font-black text-sm shadow-lg transition">
-      🏠 返回大廳
-    </button>
+    <div class="flex flex-wrap items-center justify-center gap-3 w-full max-w-sm">
+      <button type="button" onclick="leaveFromFreezeOverlay()"
+        class="w-full py-3.5 px-6 rounded-2xl bg-red-600 hover:bg-red-500 text-white border border-red-400/60 font-black text-base shadow-xl transition cursor-pointer">
+        🏠 返回大廳
+      </button>
+    </div>
   </div>
 
   <!-- Host Passcode Modal -->
@@ -2195,17 +2201,10 @@
       } else if (clientConnection && clientConnection.open) {
         try {
           clientConnection.send(payload);
-        } catch (e) {}
+        } catch (e) {
+          console.error('Send player action failed:', e);
+        }
       }
-    }
-
-    // ================= Disconnect Pause & 10-Min Timeout =================
-    function updateDisconnectTimerDisplay() {
-      const el = document.getElementById('disconnect-countdown');
-      if (!el) return;
-      const mins = Math.floor(disconnectSecondsLeft / 60);
-      const secs = disconnectSecondsLeft % 60;
-      el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
 
     function clearDisconnectState() {
@@ -2221,30 +2220,66 @@
       }
     }
 
-    function manualReconnect() {
-      if (lobbyState.isCoHostClient && clientConnection && clientConnection.open) {
-        clientConnection.send({ type: 'HOST_REMOTE_ACTION', action: 'FORCE_RECONNECT_RESUME' });
-        return;
-      }
-      disconnectedPlayersMap = {};
-      clearDisconnectState();
+    function updateDisconnectTimerDisplay() {
+      const labelEl = document.getElementById('disconnect-countdown');
+      if (!labelEl) return;
+      const mins = Math.floor(disconnectSecondsLeft / 60);
+      const secs = disconnectSecondsLeft % 60;
+      labelEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function leaveFromFreezeOverlay() {
       if (lobbyState.isHost && !lobbyState.isCoHostClient) {
-        broadcastStateToAllClients('playing');
+        broadcastStateToAllClients('closed');
+      } else if (clientConnection && clientConnection.open) {
+        try {
+          clientConnection.send({ type: 'LEAVE_LOBBY', uid: myPlayerUid });
+        } catch (e) {}
       }
-      showToast('✅ 連線已恢復，遊戲繼續進行！', 'success');
+      cleanupPeerNetwork();
+      clearDisconnectState();
+      lobbyState.isHost = false;
+      lobbyState.isCoHostClient = false;
+      const headerEl = document.getElementById('game-main-header');
+      if (headerEl) headerEl.classList.add('hidden');
+      ['view-player', 'view-projector', 'view-host', 'view-ai'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      const lobbyEl = document.getElementById('view-lobby');
+      if (lobbyEl) lobbyEl.classList.remove('hidden');
+      backToLobbySelect();
+      showToast('已返回遊戲大廳', 'info');
     }
 
     function applyGlobalFreezeOverlay(namesList = ['玩家'], secondsRemaining = 600) {
       disconnectSecondsLeft = Math.max(0, Math.floor(secondsRemaining));
+      const cleanNames = Array.isArray(namesList) && namesList.length > 0 ? namesList : ['玩家'];
+      const activeCode = lobbyState.roomCode || gameState.roomCode || '----';
       const overlay = document.getElementById('disconnect-overlay');
       if (overlay) {
-        const titleEl = overlay.querySelector('h2');
-        const descEl = overlay.querySelector('p');
+        const codeEl = document.getElementById('disconnect-room-code');
+        const titleEl = document.getElementById('disconnect-overlay-title');
+        const namesContainer = document.getElementById('disconnect-names-list');
+        const descEl = document.getElementById('disconnect-overlay-desc');
+
+        if (codeEl) {
+          codeEl.textContent = activeCode;
+        }
         if (titleEl) {
-          titleEl.textContent = `📡 有人斷線（${namesList.join('、')}）· 畫面已凍結等待重連`;
+          titleEl.textContent = cleanNames.length > 1
+            ? `📡 共有 ${cleanNames.length} 位玩家斷線 · 畫面已凍結`
+            : `📡 有人斷線（${cleanNames[0]}）· 畫面已凍結`;
+        }
+        if (namesContainer) {
+          namesContainer.innerHTML = cleanNames.map(n => `
+            <span class="px-3 py-1 rounded-full bg-red-950/90 border border-red-500/80 text-red-200 font-black text-xs sm:text-sm">
+              ⚠️ ${n}
+            </span>
+          `).join('');
         }
         if (descEl) {
-          descEl.textContent = '目前有人斷線，其他人畫面已凍結並不會被踢出房間。已設定 10 分鐘計時器等待該玩家重新入房，重連後提示會自動消失並恢復正常遊戲！';
+          descEl.textContent = `目前有 ${cleanNames.length} 位玩家斷線，其他人畫面已凍結並不會被踢出房間。請斷線玩家輸入房號 [${activeCode}] 重新加入即可自動解除凍結！`;
         }
         overlay.classList.remove('hidden');
       }
