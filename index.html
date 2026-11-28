@@ -20,6 +20,9 @@
     }
     .font-title { font-family: 'Cinzel', 'Noto Sans TC', serif; }
     .font-number { font-family: 'JetBrains Mono', monospace; }
+    .hidden { display: none !important; }
+    button { touch-action: manipulation; cursor: pointer; }
+    button * { pointer-events: none; }
 
     .diamond-bg {
       background-image:
@@ -93,7 +96,7 @@
   <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
   <!-- Disconnect / Pause Overlay -->
-  <div id="disconnect-overlay" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-5 sm:p-8 text-center">
+  <div id="disconnect-overlay" style="display: none;" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-5 sm:p-8 text-center">
     <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-950/80 border-2 border-red-500 flex items-center justify-center mb-4 animate-pulse">
       <span class="text-3xl sm:text-4xl">📡</span>
     </div>
@@ -118,7 +121,7 @@
   </div>
 
   <!-- Host Passcode Modal -->
-  <div id="password-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="password-modal" style="display: none;" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="glass-panel rounded-2xl p-6 max-w-sm w-full border border-zinc-700 shadow-2xl">
       <h3 class="text-lg font-bold text-white mb-2">🔒 驗證主持權限</h3>
       <p class="text-xs text-zinc-400 mb-4">請輸入主持管理密碼（預設：<span class="font-number text-amber-400">1234</span>）</p>
@@ -2221,6 +2224,7 @@
       const overlay = document.getElementById('disconnect-overlay');
       if (overlay) {
         overlay.classList.add('hidden');
+        overlay.style.display = 'none';
       }
     }
 
@@ -2286,6 +2290,7 @@
           descEl.textContent = `目前仍有 ${cleanNames.length} 位玩家斷線，全場畫面已凍結。斷線玩家使用房號 [${activeCode}] 重新加入後，其名字會自動消失並於全員連回後解除凍結！`;
         }
         overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
       }
       updateDisconnectTimerDisplay();
 
@@ -2916,8 +2921,14 @@
     function bindLobbyAndSafetyEvents() {
       const overlay = document.getElementById('disconnect-overlay');
       const pwdModal = document.getElementById('password-modal');
-      if (overlay && !isDisconnected) overlay.classList.add('hidden');
-      if (pwdModal) pwdModal.classList.add('hidden');
+      if (overlay && !isDisconnected) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+      }
+      if (pwdModal) {
+        pwdModal.classList.add('hidden');
+        pwdModal.style.display = 'none';
+      }
 
       const btnJoin = document.getElementById('btn-home-join');
       const btnCreate = document.getElementById('btn-home-create');
